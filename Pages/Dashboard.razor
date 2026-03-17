@@ -1,0 +1,37 @@
+﻿@page "/dashboard"
+@layout MainLayout
+@using Microsoft.AspNetCore.Authorization
+@inject DashboardService DS
+@attribute [Authorize]
+
+<PageTitle>Dashboard</PageTitle>
+
+<div>
+    <div>
+
+    </div>
+    <div id="weekly-taskboard" class="">
+
+    </div>
+</div>
+<h2>RECENT NOTES</h2>
+
+<h2>QUICK ACCESS FOLDERS</h2>
+
+<div>
+    @* @foreach (var note in dashboardResponse.RecentNotes)
+    {
+        
+    } *@
+</div>
+
+
+@code {
+    private DashboardResponse dashboardResponse;
+
+    protected override async Task OnInitializedAsync()
+    {
+        //dashboardResponse = await DS.GetDashboardAsync();
+    }
+
+}

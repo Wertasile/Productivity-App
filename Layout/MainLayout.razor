@@ -1,0 +1,35 @@
+﻿@inherits LayoutComponentBase
+@using MudBlazor
+
+@* Required *@
+<MudThemeProvider />
+<MudPopoverProvider />
+
+@* Needed for dialogs *@
+<MudDialogProvider NoHeader="true" CloseButton="true" CloseOnEscapeKey="true"/>
+
+@* Needed for snackbars *@
+<MudSnackbarProvider />
+
+<MudLayout>
+
+    <NavMenu />
+
+    <MudMainContent Style="padding-top: 0;">
+        <div class="content px-4">
+            @Body
+        </div>
+    </MudMainContent>
+
+</MudLayout>
+@* <div class="page">
+    <div class="">
+        <NavMenu />
+    </div>
+
+    <main>
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div> *@

@@ -1,0 +1,223 @@
+﻿@page "/calendar"
+@using Microsoft.AspNetCore.Authorization
+@layout MainLayout
+@attribute [Authorize]
+@using System;
+@using System.Globalization;
+@using System.Text.Json
+@inject HttpClient Http
+@inject IDialogService DialogService
+
+<div class="d-flex p-2 justify-content-between">
+    <div class="d-flex gap-10">
+        <h3>@CurrentMonth.ToString("MMMM")</h3>
+        <div>
+            <div class="icon-link" @onclick="PrevMonth">-</div>
+            <div class="icon-link" @onclick="NextMonth">+</div>
+        </div>
+
+    </div>
+    <div>
+        <button class="secondary-lavendar-btn btn">TASKS AND REMINDERS</button>
+        <button class="primary-lavendar-btn btn">VIEW CALENDAR</button>
+        <button class="primary-lavendar-btn btn">VIEW TASKBOARD</button>
+    </div>
+</div>
+
+<div class="d-flex gap-6 min-vw-100">
+
+    <div>
+        <div class="d-flex justify-content-between">
+            
+        </div>
+        @* <p>@DaysInMonth days</p> *@
+
+        <div class="calendar-grid">
+
+            @foreach (var day in DayHeaders)
+            {
+                <div class="calendar-day-header">@day</div>
+            }
+
+            @foreach (var day in GenerateCalendarDays())
+            {
+                var key = day.ToString("yyyy-MM-dd");
+
+                <div class="calendar-day @(day.Month == CurrentMonth.Month ? "" : "other-month")"
+                     @onclick="() => OpenDetailedDateView(calendarResponse.TryGetValue(key, out var item) ? item : null)">
+        
+                    <h6 class="text-center">@day.Day</h6>
+
+                    <div class="d-flex justify-content-around">
+                        @if (calendarResponse.TryGetValue(key, out var item2))
+                        {
+                            @if (item2.Tasks.Count > 0)
+                            {
+                                <div class="icon task-icon">@item2.Tasks.Count</div>
+                            }
+                            @if (item2.Reminders.Count > 0)
+                            {
+                                <div class="icon reminder-icon">@item2.Reminders.Count</div>
+                            }
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+     
+    <div class="month-items">
+        <h4>TASKS AND REMINDERS</h4>
+        <div class="flex-column d-flex">
+            @foreach (var day in GenerateCalendarDays())
+            {
+                var dayKey = day.ToString("yyyy-MM-dd");
+
+                @if (calendarResponse.TryGetValue(dayKey, out var trItem)) {
+                    <div class="flex-row d-flex">
+                        @if (trItem.Tasks.Count > 0 || trItem.Reminders.Count > 0)
+                        {
+                            <div class="flex-column d-flex">
+                                <h4>@day.Day</h4>
+                                <div>@day.DayOfWeek</div>
+                            </div>
+                            
+                        }
+                        <div class="d-flex flex-column rounded-1 gap-2">
+
+                            @if (trItem.Tasks.Count > 0)
+                            {
+                                foreach (TaskItem task in trItem.Tasks)
+                                {
+                                    <div class="event eventTask">
+                                        @task.Title
+                                    </div>
+                                }
+                            }
+                            @if (trItem.Reminders.Count > 0)
+                            {
+                                foreach (Reminder reminder in trItem.Reminders) {
+                                    <div class="event eventReminder">
+                                        @reminder.Name
+                                    </div>
+                                }
+                        
+                            }
+                        </div>
+                    </div>
+                }
+                
+            }
+        </div>
+    </div>
+
+    <div class="month-notes">
+        <h4>NOTES</h4>
+        <div class="flex-column d-flex">
+            @foreach (var day in GenerateCalendarDays())
+            {
+                var dayKey = day.ToString("yyyy-MM-dd");
+
+                @if (calendarResponse.TryGetValue(dayKey, out var resItem))
+                {
+                    // within a day, if a day contains notes, we display the date and the notes. If there are no notes, we skip the day entirely (i.e. we do not display the date at all)
+                    @if (resItem.Notes.Count > 0)
+                    {
+                        <div class="flex-row d-flex">
+                            <div class="flex-column d-flex">
+                                <h4>@day.Day</h4>
+                                <div>@day.DayOfWeek.ToString().Substring(0,3)</div>
+                            </div>
+                            <div class="d-flex flex-column rounded-1 gap-2">
+                                @foreach (Note note in resItem.Notes)
+                                {
+                                    <div class="event eventNote">
+                                        @note.Title
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+                
+            }
+        </div>
+    </div>
+
+</div>
+
+
+
+@code {
+    public string CurrentDate = DateTime.Now.ToString().Split(" ")[0];
+    public string MonthName = DateTime.Now.ToString("MMMM");
+    public DateTime CurrentMonth = DateTime.Now;
+    private CalendarResponse calendarResponse = new();
+    private List<DateTime> days = new();
+
+    private Task OpenDetailedDateView(CalendarItem? dateItem)
+    {
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium
+        };
+
+        var parameters = new DialogParameters
+        {
+            { "DateItem", dateItem }
+        };
+
+        return DialogService.ShowAsync<DateDialog>("View Date", parameters, options);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        //calendarResponse = await taskBoardService.GetWeekData();
+
+        calendarResponse = await Http.GetFromJsonAsync<CalendarResponse>("sample-data/SampleCalendarResponse.json");
+
+        // cannot directly Console.WriteLine an JS object, so we serialize it to JSON string for logging
+        var serialisedCalendarData = JsonSerializer.Serialize(calendarResponse, new JsonSerializerOptions
+        {
+            WriteIndented = true // for better readability in the console
+        });
+
+        Console.WriteLine(serialisedCalendarData);
+    }
+
+    public void PrevMonth()
+    {
+        CurrentMonth = CurrentMonth.AddMonths(-1);
+    }
+
+    public void NextMonth()
+    {
+        CurrentMonth = CurrentMonth.AddMonths(1);
+    }
+
+    public List<string> DayHeaders = new() { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
+
+    public List<DateTime> GenerateCalendarDays()
+    {
+        var days = new List<DateTime>();
+
+        var firstDayOfMonth = new DateTime(CurrentMonth.Year, CurrentMonth.Month, 1); // DateTime object for the first day of the current month
+
+        int diff = (7 + (firstDayOfMonth.DayOfWeek - DayOfWeek.Monday)) % 7; // Calculate the difference in days to the previous Monday
+
+        var startDate = firstDayOfMonth.AddDays(-diff); // Get the date of the previous Monday
+
+        for (int i = 0 ; i < 42 ; i ++)
+        {
+            days.Add(startDate.AddDays(i));
+        }
+
+        return days;
+    }
+
+
+
+    
+}

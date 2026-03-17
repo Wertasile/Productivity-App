@@ -1,0 +1,43 @@
+﻿@inject NavigationManager Navigation
+@* @inject AuthService AuthService *@
+
+<EditForm Model="@confirmEmailModel" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label>Email</label>
+        <InputText @bind-Value="confirmEmailModel.Email" placeholder="Enter email again" />
+    </div>
+
+   <div>
+       <label>Code</label>
+        <InputText @bind-Value="confirmEmailModel.Code" placeholder="Enter code from email" />
+   </div>
+
+    <button type="submit">Verify Email</button>
+</EditForm>
+
+@code {
+    private ConfirmEmailModel confirmEmailModel = new();
+
+    private async Task HandleValidSubmit()
+    {
+        // var response = await AuthService.ConfirmEmailAsync(confirmEmailModel.Email , confirmEmailModel.Code);
+        // if (response.Success)
+        // {
+        //     Navigation.NavigateTo("/login");
+        // }
+        // else
+        // {
+           
+        // }
+    }
+
+    private class ConfirmEmailModel
+    {
+        public string Email { get; set; }
+        public string Code { get; set; }
+    }
+
+}

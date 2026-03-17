@@ -1,0 +1,52 @@
+﻿@inject AuthService AuthService
+@inject NavigationManager Navigation
+@using ActualBlazorStandAloneAppSPA.Pages
+@inject IServiceProvider ServiceProvider
+
+<EditForm Model="@loginModel" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label>Email;</label>
+        <InputText @bind-Value="loginModel.Email" placeholder="Email" />
+    </div>
+    
+    <div>
+        <label>Password</label>
+        <InputText @bind-Value="loginModel.Password" type="password" placeholder="Password" />
+    </div>
+   
+    <button type="submit">Login</button>
+
+    <button type="button" @onclick="() => OnSwitch.InvokeAsync(AuthState.Register)">New to EasyNote? Create an Account!</button>
+</EditForm>
+
+@code {
+    [Parameter]
+    public EventCallback<AuthState> OnSwitch { get; set; }
+
+    private LoginModel loginModel = new();
+
+
+    private async Task HandleValidSubmit()
+    {
+        var response = await AuthService.LoginAsync(loginModel.Email, loginModel.Password);
+        if (response == "Login successful.")
+        {
+            Navigation.NavigateTo("/dashboard");
+        }
+        else
+        {
+            
+        }
+    }
+
+    public class LoginModel
+    {
+        [EditorRequired]
+        public string Email { get; set; }
+        [EditorRequired]
+        public string Password { get; set; }
+    }
+}

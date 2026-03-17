@@ -1,0 +1,38 @@
+﻿@page "/notes"
+@using Microsoft.AspNetCore.Authorization
+@layout MainLayout
+@attribute [Authorize]
+
+<h3>Notes</h3>
+
+@code {
+    public List<Note> notes;
+
+    protected override void OnInitialized()
+    {
+        // Code to retreive notes from a data source would go here. For now, we'll just create some sample notes.
+    }
+
+    private async Task LoadNotes()
+    {
+        
+        
+    }
+    private void AddNote()
+    {
+
+    }
+
+    private void EditNote(Note note)
+    {
+        
+    }
+
+    private void DeleteNote(Note note)
+    {
+            
+    }
+
+
+
+}

@@ -1,0 +1,51 @@
+﻿@* @inject AuthService AuthService *@
+@inject NavigationManager Navigation
+
+<EditForm Model="@registerModel" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label>Username</label>
+        <InputText @bind-Value="registerModel.Username" placeholder="Username" />
+    </div>
+
+    <div>
+        <label>Password</label>
+        <InputText @bind-Value="registerModel.Password" type="password" placeholder="Password" />
+    </div>
+
+    <button type="submit">Register</button>
+
+    <button type="button" @onclick="() => OnSwitch.InvokeAsync(AuthState.Login)">Got an account, Login here!</button>
+</EditForm>
+
+@code {
+    [Parameter]
+    public EventCallback<AuthState> OnSwitch { get; set; }
+
+    private RegisterModel registerModel = new();
+
+    private async Task HandleValidSubmit()
+    {
+        // var response = await AuthService.Register(registerModel.Username, registerModel.Email, registerModel.Password);
+        // if (response.Success)
+        // {
+        //     Navigation.NavigateTo("/login");
+        // }
+        // else
+        // {
+        //     Console.WriteLine(response.ErrorMessage);
+        // }
+    }
+
+    public class RegisterModel
+    {
+
+        public string Username { get; set; }
+
+        public string Email { get; set; }
+
+        public string Password { get; set; }
+    }
+}

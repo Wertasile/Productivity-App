@@ -1,0 +1,71 @@
+﻿@inject MudBlazor.IDialogService DialogService
+
+<MudDialog>
+    
+    <DialogContent>
+        <div class="d-flex">
+            <button class="btn primary-lavendar-btn">ADD ITEM</button>
+        </div>
+        <div class="flex-column d-flex">
+
+            @* TASKS *@
+            <div class="d-flex flex-column">
+                <div class="d-flex justify-content-between">
+                    <h4>TASKS</h4>
+                    <div>
+                        @DateItem.Tasks.Count
+                    </div>
+                </div>
+
+                @foreach(var task in DateItem.Tasks)
+                {
+                    <div class="d-flex justify-content-between">
+                        <p>@task.Title</p>
+                        <div class="icon task-icon"></div>
+                    </div>
+                }
+                
+            </div>
+
+            @* REMINDERS *@
+            <div class="d-flex flex-column">
+                <div class="d-flex justify-content-between">
+                    <h4>REMINDERS</h4>
+                    <div>
+                        @DateItem.Reminders.Count
+                    </div>
+                </div>
+
+                @foreach (var reminder in DateItem.Reminders)
+                {
+                    <div class="d-flex justify-content-between">
+                        <p>@reminder.Name</p>
+                        <div class="icon task-icon"></div>
+                    </div>
+                }
+                
+            </div>
+
+        </div>
+        <div></div>
+
+
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">OK</MudButton>
+
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public CalendarItem DateItem { get; set; } = new();
+
+    private void Submit() => MudDialog.Close(DialogResult.Ok(true));
+
+    private void Cancel() => MudDialog.Cancel();
+}

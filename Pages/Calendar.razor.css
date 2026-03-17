@@ -1,0 +1,48 @@
+﻿.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
+}
+
+.calendar-day {
+    width: 75px;
+    height: 75px;
+    background-color: var(--light-lavendar);
+    border: 1px solid #979797;
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between
+}
+
+.calendar-day-header {
+    background-color: var(--secondary-lavendar);
+    text-align: center;
+    color: var(--light-lavendar)
+}
+
+.other-month{
+    opacity: 0.5;
+}
+
+.month-notes {
+    background-color: var(--light-blue);
+    border-radius: 5px;
+    border: 1px solid #979797;
+    min-height: 80vh;
+}
+
+.month-items {
+    background-color: var(--light-lavendar);
+    border-radius: 5px;
+    border: 1px solid #979797;
+    min-height: 80vh;
+}
+
+.reminder-icon{
+    background-color: var(--primary-red);
+}
+
+.task-icon {
+    background-color: var(--primary-green);
+}

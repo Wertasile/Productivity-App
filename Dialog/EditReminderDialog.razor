@@ -1,0 +1,26 @@
+
+@inject MudBlazor.IDialogService DialogService
+
+<MudDialog Style="">
+    <TitleContent>Dialog Title
+    </TitleContent>
+    <DialogContent>
+        @Reminder.Name
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">OK</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public Reminder Reminder { get; set; } = new();
+
+    private void Submit() => MudDialog.Close(DialogResult.Ok(true));
+
+    private void Cancel() => MudDialog.Cancel();
+}

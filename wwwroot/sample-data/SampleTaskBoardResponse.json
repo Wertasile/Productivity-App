@@ -1,0 +1,320 @@
+{
+  "weekStart": "2026-03-09",
+  "weekEnd": "2026-03-15",
+  "items": {
+    "2026-03-09": {
+      "Tasks": [
+        {
+          "Id": "task-101",
+          "UserId": "abc123",
+          "ParentTaskId": null,
+          "Title": "Plan Weekly Goals",
+          "EntityType": "TASK",
+          "Description": "Define priorities for the week",
+          "Progress": 100,
+          "IsCompleted": true,
+          "CompletionDate": "2026-03-09T09:15:00Z",
+          "DueDate": "2026-03-09T09:00:00Z",
+          "CreatedAt": "2026-03-08T12:00:00Z",
+          "UpdatedAt": "2026-03-09T09:15:00Z"
+        },
+        {
+          "Id": "task-102",
+          "UserId": "abc123",
+          "ParentTaskId": null,
+          "Title": "Team Standup Preparation",
+          "EntityType": "TASK",
+          "Description": "Prepare talking points",
+          "Progress": 100,
+          "IsCompleted": true,
+          "CompletionDate": "2026-03-09T09:55:00Z",
+          "DueDate": "2026-03-09T10:00:00Z",
+          "CreatedAt": "2026-03-08T13:00:00Z",
+          "UpdatedAt": "2026-03-09T09:55:00Z"
+        }
+      ],
+      "Reminders": [
+        {
+          "Id": "rem-11",
+          "UserId": "abc123",
+          "Name": "Morning Standup",
+          "EntityType": "REMINDER",
+          "Description": "Daily team meeting",
+          "ReminderDate": "2026-03-09T10:00:00Z",
+          "IsAcknowledged": true,
+          "CreatedAt": "2026-03-08T10:00:00Z",
+          "UpdatedAt": "2026-03-09T10:05:00Z"
+        }
+      ],
+      "Notes": [
+        {
+          "Id": "note-101",
+          "UserId": "abc123",
+          "EntityType": "NOTE",
+          "Title": "Weekly Strategy",
+          "Content": "Focus on improving productivity features in the calendar module.",
+          "FolderId": null,
+          "CreatedAt": "2026-03-09T08:30:00Z",
+          "UpdatedAt": "2026-03-09T08:30:00Z"
+        }
+      ]
+    },
+
+    "2026-03-10": {
+      "Tasks": [
+        {
+          "Id": "task-123",
+          "UserId": "abc123",
+          "ParentTaskId": null,
+          "Title": "Finish Work",
+          "EntityType": "TASK",
+          "Description": "Finish the weekly report",
+          "Progress": 40,
+          "IsCompleted": false,
+          "CompletionDate": null,
+          "DueDate": "2026-03-10T14:00:00Z",
+          "CreatedAt": "2026-03-08T10:00:00Z",
+          "UpdatedAt": "2026-03-08T10:30:00Z"
+        },
+        {
+          "Id": "task-124",
+          "UserId": "abc123",
+          "ParentTaskId": "task-123",
+          "Title": "Collect Data",
+          "EntityType": "TASK",
+          "Description": "Gather metrics for the report",
+          "Progress": 100,
+          "IsCompleted": true,
+          "CompletionDate": "2026-03-10T10:00:00Z",
+          "DueDate": "2026-03-10T10:00:00Z",
+          "CreatedAt": "2026-03-09T15:00:00Z",
+          "UpdatedAt": "2026-03-10T10:00:00Z"
+        },
+        {
+          "Id": "task-125",
+          "UserId": "abc123",
+          "ParentTaskId": "task-123",
+          "Title": "Write Summary",
+          "EntityType": "TASK",
+          "Description": "Summarize insights",
+          "Progress": 20,
+          "IsCompleted": false,
+          "CompletionDate": null,
+          "DueDate": "2026-03-10T13:30:00Z",
+          "CreatedAt": "2026-03-09T15:10:00Z",
+          "UpdatedAt": "2026-03-10T09:30:00Z"
+        }
+      ],
+      "Reminders": [
+        {
+          "Id": "rem-55",
+          "UserId": "abc123",
+          "Name": "Doctor Appointment",
+          "EntityType": "REMINDER",
+          "Description": "Annual checkup",
+          "ReminderDate": "2026-03-10T09:00:00Z",
+          "IsAcknowledged": false,
+          "CreatedAt": "2026-03-07T10:00:00Z",
+          "UpdatedAt": "2026-03-07T10:00:00Z"
+        },
+        {
+          "Id": "rem-56",
+          "UserId": "abc123",
+          "Name": "Report Submission",
+          "EntityType": "REMINDER",
+          "Description": "Submit report to manager",
+          "ReminderDate": "2026-03-10T14:00:00Z",
+          "IsAcknowledged": false,
+          "CreatedAt": "2026-03-09T10:00:00Z",
+          "UpdatedAt": "2026-03-09T10:00:00Z"
+        }
+      ],
+      "Notes": [
+        {
+          "Id": "note-777",
+          "UserId": "abc123",
+          "EntityType": "NOTE",
+          "Title": "Project Idea",
+          "Content": "Calendar drag-drop improvement",
+          "FolderId": null,
+          "CreatedAt": "2026-03-06T10:00:00Z",
+          "UpdatedAt": "2026-03-06T10:00:00Z"
+        }
+      ]
+    },
+
+    "2026-03-11": {
+      "Tasks": [
+        {
+          "Id": "task-200",
+          "UserId": "abc123",
+          "ParentTaskId": null,
+          "Title": "Code Review",
+          "EntityType": "TASK",
+          "Description": "Review teammate PRs",
+          "Progress": 60,
+          "IsCompleted": false,
+          "CompletionDate": null,
+          "DueDate": "2026-03-11T16:00:00Z",
+          "CreatedAt": "2026-03-10T16:00:00Z",
+          "UpdatedAt": "2026-03-11T09:00:00Z"
+        }
+      ],
+      "Reminders": [
+        {
+          "Id": "rem-60",
+          "UserId": "abc123",
+          "Name": "Client Call",
+          "EntityType": "REMINDER",
+          "Description": "Discuss feature roadmap",
+          "ReminderDate": "2026-03-11T15:00:00Z",
+          "IsAcknowledged": false,
+          "CreatedAt": "2026-03-10T12:00:00Z",
+          "UpdatedAt": "2026-03-10T12:00:00Z"
+        }
+      ],
+      "Notes": [
+        {
+          "Id": "note-201",
+          "UserId": "abc123",
+          "EntityType": "NOTE",
+          "Title": "Meeting Points",
+          "Content": "Client interested in automation and calendar integration.",
+          "FolderId": null,
+          "CreatedAt": "2026-03-11T11:00:00Z",
+          "UpdatedAt": "2026-03-11T11:00:00Z"
+        }
+      ]
+    },
+
+    "2026-03-12": {
+      "Tasks": [
+        {
+          "Id": "task-300",
+          "UserId": "abc123",
+          "ParentTaskId": null,
+          "Title": "Implement Drag-Drop Feature",
+          "EntityType": "TASK",
+          "Description": "Add drag and drop to calendar tasks",
+          "Progress": 10,
+          "IsCompleted": false,
+          "CompletionDate": null,
+          "DueDate": "2026-03-12T18:00:00Z",
+          "CreatedAt": "2026-03-11T16:00:00Z",
+          "UpdatedAt": "2026-03-12T09:00:00Z"
+        }
+      ],
+      "Reminders": [
+        {
+          "Id": "rem-70",
+          "UserId": "abc123",
+          "Name": "Gym",
+          "EntityType": "REMINDER",
+          "Description": "Evening workout",
+          "ReminderDate": "2026-03-12T18:30:00Z",
+          "IsAcknowledged": false,
+          "CreatedAt": "2026-03-11T17:00:00Z",
+          "UpdatedAt": "2026-03-11T17:00:00Z"
+        }
+      ],
+      "Notes": []
+    },
+
+    "2026-03-13": {
+      "Tasks": [
+        {
+          "Id": "task-400",
+          "UserId": "abc123",
+          "ParentTaskId": null,
+          "Title": "Refactor Calendar Module",
+          "EntityType": "TASK",
+          "Description": "Improve performance and structure",
+          "Progress": 0,
+          "IsCompleted": false,
+          "CompletionDate": null,
+          "DueDate": "2026-03-13T17:00:00Z",
+          "CreatedAt": "2026-03-12T12:00:00Z",
+          "UpdatedAt": "2026-03-12T12:00:00Z"
+        }
+      ],
+      "Reminders": [],
+      "Notes": [
+        {
+          "Id": "note-401",
+          "UserId": "abc123",
+          "EntityType": "NOTE",
+          "Title": "Refactor Ideas",
+          "Content": "Consider separating UI state from server data.",
+          "FolderId": null,
+          "CreatedAt": "2026-03-13T10:00:00Z",
+          "UpdatedAt": "2026-03-13T10:00:00Z"
+        }
+      ]
+    },
+
+    "2026-03-14": {
+      "Tasks": [
+        {
+          "Id": "task-500",
+          "UserId": "abc123",
+          "ParentTaskId": null,
+          "Title": "Personal Finance Review",
+          "EntityType": "TASK",
+          "Description": "Check expenses and subscriptions",
+          "Progress": 0,
+          "IsCompleted": false,
+          "CompletionDate": null,
+          "DueDate": "2026-03-14T12:00:00Z",
+          "CreatedAt": "2026-03-13T18:00:00Z",
+          "UpdatedAt": "2026-03-13T18:00:00Z"
+        }
+      ],
+      "Reminders": [
+        {
+          "Id": "rem-90",
+          "UserId": "abc123",
+          "Name": "Groceries",
+          "EntityType": "REMINDER",
+          "Description": "Weekly grocery shopping",
+          "ReminderDate": "2026-03-14T11:00:00Z",
+          "IsAcknowledged": false,
+          "CreatedAt": "2026-03-13T18:10:00Z",
+          "UpdatedAt": "2026-03-13T18:10:00Z"
+        }
+      ],
+      "Notes": []
+    },
+
+    "2026-03-15": {
+      "Tasks": [
+        {
+          "Id": "task-600",
+          "UserId": "abc123",
+          "ParentTaskId": null,
+          "Title": "Weekly Reflection",
+          "EntityType": "TASK",
+          "Description": "Review achievements and plan improvements",
+          "Progress": 0,
+          "IsCompleted": false,
+          "CompletionDate": null,
+          "DueDate": "2026-03-15T19:00:00Z",
+          "CreatedAt": "2026-03-14T20:00:00Z",
+          "UpdatedAt": "2026-03-14T20:00:00Z"
+        }
+      ],
+      "Reminders": [],
+      "Notes": [
+        {
+          "Id": "note-601",
+          "UserId": "abc123",
+          "EntityType": "NOTE",
+          "Title": "Weekly Thoughts",
+          "Content": "Need better time blocking for deep work.",
+          "FolderId": null,
+          "CreatedAt": "2026-03-15T20:00:00Z",
+          "UpdatedAt": "2026-03-15T20:00:00Z"
+        }
+      ]
+    }
+  }
+}

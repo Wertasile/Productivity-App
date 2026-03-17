@@ -1,0 +1,260 @@
+﻿{
+    "2026-03-01": {
+        "Tasks": [
+            {
+                "Id": "task-001",
+                "UserId": "user-123",
+                "ParentTaskId": null,
+                "Title": "Finish project proposal",
+                "EntityType": "TASK",
+                "Description": "Complete initial draft of the project proposal",
+                "Progress": 50,
+                "IsCompleted": false,
+                "CompletionDate": null,
+                "DueDate": "2026-03-03T23:59:00",
+                "CreatedAt": "2026-02-20T10:00:00",
+                "UpdatedAt": "2026-02-28T14:30:00"
+            }
+        ],
+        "Reminders": [
+            {
+                "Id": "rem-001",
+                "UserId": "user-123",
+                "Name": "Call supplier",
+                "EntityType": "REMINDER",
+                "Description": "Check on shipment status",
+                "ReminderDate": "2026-03-01T09:00:00",
+                "IsAcknowledged": false,
+                "CreatedAt": "2026-02-25T12:00:00",
+                "UpdatedAt": "2026-02-25T12:00:00"
+            }
+        ],
+        "Notes": [
+            {
+                "Id": "note-001",
+                "UserId": "user-123",
+                "EntityType": "NOTE",
+                "Title": "Meeting notes",
+                "Content": "Discussed project milestones and deliverables.",
+                "FolderId": null,
+                "CreatedAt": "2026-02-27T15:00:00",
+                "UpdatedAt": "2026-02-27T15:00:00"
+            }
+        ]
+    },
+    "2026-03-02": {
+        "Tasks": [
+            {
+                "Id": "task-002",
+                "UserId": "user-123",
+                "ParentTaskId": "task-001",
+                "Title": "Write executive summary",
+                "EntityType": "TASK",
+                "Description": "Prepare executive summary for project proposal",
+                "Progress": 0,
+                "IsCompleted": false,
+                "CompletionDate": null,
+                "DueDate": "2026-03-05T23:59:00",
+                "CreatedAt": "2026-02-28T11:00:00",
+                "UpdatedAt": "2026-03-01T09:30:00"
+            }
+        ],
+        "Reminders": [
+            {
+                "Id": "rem-002",
+                "UserId": "user-123",
+                "Name": "Team standup",
+                "EntityType": "REMINDER",
+                "Description": "Daily team meeting via Zoom",
+                "ReminderDate": "2026-03-02T10:00:00",
+                "IsAcknowledged": true,
+                "CreatedAt": "2026-02-28T08:00:00",
+                "UpdatedAt": "2026-03-01T18:00:00"
+            }
+        ],
+        "Notes": []
+    },
+    "2026-03-03": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": [
+            {
+                "Id": "note-002",
+                "UserId": "user-123",
+                "EntityType": "NOTE",
+                "Title": "Ideas for presentation",
+                "Content": "Brainstorm topics for next week's presentation.",
+                "FolderId": "folder-001",
+                "CreatedAt": "2026-03-01T14:00:00",
+                "UpdatedAt": "2026-03-02T16:30:00"
+            }
+        ]
+    },
+    "2026-03-04": {
+        "Tasks": [
+            {
+                "Id": "task-003",
+                "UserId": "user-123",
+                "ParentTaskId": null,
+                "Title": "Prepare slides",
+                "EntityType": "TASK",
+                "Description": "Prepare PowerPoint slides for client meeting",
+                "Progress": 20,
+                "IsCompleted": false,
+                "CompletionDate": null,
+                "DueDate": "2026-03-06T12:00:00",
+                "CreatedAt": "2026-03-02T10:30:00",
+                "UpdatedAt": "2026-03-03T09:00:00"
+            }
+        ],
+        "Reminders": [],
+        "Notes": []
+    },
+    "2026-03-05": {
+        "Tasks": [],
+        "Reminders": [
+            {
+                "Id": "rem-003",
+                "UserId": "user-123",
+                "Name": "Submit invoice",
+                "EntityType": "REMINDER",
+                "Description": "Submit invoice to client before deadline",
+                "ReminderDate": "2026-03-05T17:00:00",
+                "IsAcknowledged": false,
+                "CreatedAt": "2026-03-01T13:00:00",
+                "UpdatedAt": "2026-03-03T14:00:00"
+            }
+        ],
+        "Notes": []
+    },
+    "2026-03-06": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": []
+    },
+    "2026-03-07": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": []
+    },
+    "2026-03-08": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": []
+    },
+    "2026-03-09": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": []
+    },
+    "2026-03-10": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": []
+    },
+    "2026-03-11": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": []
+    },
+    "2026-03-12": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": []
+    },
+    "2026-03-13": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": []
+    },
+    "2026-03-14": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": []
+    },
+    "2026-03-15": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": []
+    },
+    "2026-03-16": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": []
+    },
+    "2026-03-17": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": []
+    },
+    "2026-03-18": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": []
+    },
+    "2026-03-19": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": []
+    },
+    "2026-03-20": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": []
+    },
+    "2026-03-21": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": []
+    },
+    "2026-03-22": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": []
+    },
+    "2026-03-23": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": []
+    },
+    "2026-03-24": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": []
+    },
+    "2026-03-25": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": []
+    },
+    "2026-03-26": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": []
+    },
+    "2026-03-27": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": []
+    },
+    "2026-03-28": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": []
+    },
+    "2026-03-29": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": []
+    },
+    "2026-03-30": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": []
+    },
+    "2026-03-31": {
+        "Tasks": [],
+        "Reminders": [],
+        "Notes": []
+    }
+}

@@ -1,0 +1,46 @@
+﻿@page "/"
+@using ActualBlazorStandAloneAppSPA.Components
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@inject IServiceProvider ServiceProvider
+
+@inject NavigationManager Navigation
+
+
+@if (authState == AuthState.Login)
+{
+   <LoginForm OnSwitch="setState"/>
+}
+else if (authState == AuthState.Register)
+{
+    <RegisterForm OnSwitch="setState"/>
+}
+else if (authState == AuthState.ConfirmEmail)
+{
+    <ConfirmEmailForm OnSwitch="setState"/>
+}
+
+@code {
+
+    Dictionary<String, String> authTokens;
+
+    // AuthState is an enum that represents the current state of the authentication process (Login, Register, ConfirmEmail)
+    // It has been declared in Enums Folder and is in Imports.razor for easy access across the application
+    private AuthState authState = AuthState.Login;
+
+    private void setState(AuthState state)
+    {
+        authState = state;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+           
+        var tokens = await localStorage.GetItemAsync<string>("auth_tokens");
+        if (tokens != null)
+        {
+            Navigation.NavigateTo("/dashboard");
+        }
+
+    }
+
+}

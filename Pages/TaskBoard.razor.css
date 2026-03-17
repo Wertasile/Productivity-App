@@ -1,0 +1,52 @@
+﻿.hour-indicator {
+    background-color: var(--light-green);
+    padding: 0.5rem;
+    border-radius: 5px;
+}
+
+.day-header-wrapper {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 10px;
+}
+
+.day-header {
+    color: var(--light-green);
+    background-color: var(--secondary-green);
+    width: 100%;
+    padding: 2px 2px;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+}
+
+.time-row {
+    min-height: 75px;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 10px;
+}
+
+.calendar {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.time-col {
+    width: fit-content;
+    height: fit-content;
+    background: var(--light-green);
+    border-radius: 5px;
+    padding: 2px;
+    font-size: 24px;
+}
+
+.calendar-cell {
+    position: relative;
+    background-color: var(--light-green);
+    min-height: 150px;
+}
+
+
