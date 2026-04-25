@@ -14,14 +14,32 @@ using System.IdentityModel.Tokens.Jwt;
 public class CustomAuthStateProvider : Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider
 {
     private readonly TokenStore _tokenStore;
+    private readonly SessionStore _sessionStore;
 
-    public CustomAuthStateProvider(TokenStore tokenStore)
+    public CustomAuthStateProvider(TokenStore tokenStore, SessionStore sessionStore)
     {
         _tokenStore = tokenStore;
+        _sessionStore = sessionStore;
     }
 
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
     {
+        var guestSession = await _sessionStore.GetGuestSessionAsync();
+
+        if (guestSession is not null)
+        {
+            var guestIdentity = new ClaimsIdentity(
+                new[]
+                {
+                    new Claim(ClaimTypes.NameIdentifier, guestSession.UserId),
+                    new Claim(ClaimTypes.Name, guestSession.DisplayName),
+                    new Claim("auth_mode", "guest")
+                },
+                "guest");
+
+            return new AuthenticationState(new ClaimsPrincipal(guestIdentity));
+        }
+
         var tokens = await _tokenStore.GetTokensAsync();
 
         if (tokens == null)

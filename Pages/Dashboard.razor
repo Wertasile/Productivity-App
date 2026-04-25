@@ -2,36 +2,151 @@
 @layout MainLayout
 @using Microsoft.AspNetCore.Authorization
 @inject DashboardService DS
+@inject IDialogService DialogService
 @attribute [Authorize]
 
 <PageTitle>Dashboard</PageTitle>
 
-<div>
-    <div>
+<div class="dashboard-container">
+    <!-- Header Section -->
+    <section class="dashboard-header">
+        <div>
+            <div class="header-day">@DateTime.Now.ToString("dddd")</div>
+            <h1>@DateTime.Now.ToString("MMMM d")<span>th</span></h1>
+        </div>
+    </section>
 
-    </div>
-    <div id="weekly-taskboard" class="">
+    <!-- Main Grid: This Week + Today's Agenda -->
+    <section class="dashboard-grid-main">
+        <!-- This Week Section -->
+        <div class="this-week-panel">
+            <div class="panel-header">
+                <h2>This Week</h2>
+                <div class="filter-chips">
+                    <span class="chip-small">Tasks</span>
+                    <span class="chip-small">Reminders</span>
+                </div>
+            </div>
+            <div class="week-chart">
+                <div class="chart-placeholder"></div>
+                <div class="week-days">
+                    @{
+                        var today = DateTime.Today;
+                        var startOfWeek = today.AddDays(-(int)today.DayOfWeek);
+                        var dayLabels = new[] { "MO", "TU", "WE", "TH", "FR", "SA", "SU" };
+                    }
+                    @for (int i = 0; i < 7; i++)
+                    {
+                        var dayDate = startOfWeek.AddDays(i);
+                        var isToday = dayDate.Date == today;
+                        <div class="week-day-label @(isToday ? "week-day-today" : "")">
+                            <span class="day-abbr">@dayLabels[i]</span>
+                            <span class="day-num">@dayDate.Day</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
 
-    </div>
+        <!-- Today's Agenda Section -->
+        <div class="todays-agenda-panel">
+            <h2>Today's Agenda</h2>
+            <div class="agenda-items">
+                @foreach (var task in dashboardResponse.PinnedItems.Tasks)
+                {
+                    <div class="agenda-item agenda-task" @onclick="() => OpenTaskDialog(task)">
+                        <span class="agenda-title">@task.Title</span>
+                        <span class="agenda-tag">@task.EntityType</span>
+                    </div>
+                }
+                @foreach (var reminder in dashboardResponse.PinnedItems.Reminders)
+                {
+                    <div class="agenda-item agenda-reminder" @onclick="() => OpenReminderDialog(reminder)">
+                        <span class="agenda-title">@reminder.Name</span>
+                        <span class="agenda-tag">@reminder.EntityType</span>
+                    </div>
+                }
+                @if (dashboardResponse.PinnedItems.Tasks.Count == 0 && dashboardResponse.PinnedItems.Reminders.Count == 0)
+                {
+                    <div class="agenda-empty">No items scheduled for today</div>
+                }
+            </div>
+        </div>
+    </section>
+
+    <!-- Recent Notes + Scratch Pad -->
+    <section class="dashboard-grid-secondary">
+        <!-- Recent Notes Section -->
+        <div class="recent-notes-panel">
+            <h2>Recent Notes</h2>
+            <div class="notes-grid">
+                @foreach (var note in dashboardResponse.RecentNotes.Take(2))
+                {
+                    <div class="note-card" @onclick="() => OpenNoteDetail(note)">
+                        <h3>@note.Title</h3>
+                        @if (!string.IsNullOrEmpty(note.Content))
+                        {
+                            <p>@note.Content.Substring(0, Math.Min(120, note.Content.Length))...</p>
+                        }
+                        <span class="note-meta">2 hours ago</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Scratch Pad Section -->
+        <div class="scratch-pad-panel">
+            <h2>Scratch Pad</h2>
+            <textarea class="scratch-input" placeholder="Capture a passing thought..."></textarea>
+        </div>
+    </section>
+
+    <!-- Quick Access Section -->
+    <section class="quick-access-section">
+        <h2>Quick Access</h2>
+        <div class="folders-grid">
+            @foreach (var folder in dashboardResponse.Folders.Take(4))
+            {
+                <div class="folder-card">
+                    <div class="folder-icon"></div>
+                    <h3>@folder.Name</h3>
+                    <span class=\"folder-count\">Folder</span>
+                </div>
+            }
+        </div>
+    </section>
 </div>
-<h2>RECENT NOTES</h2>
-
-<h2>QUICK ACCESS FOLDERS</h2>
-
-<div>
-    @* @foreach (var note in dashboardResponse.RecentNotes)
-    {
-        
-    } *@
-</div>
-
 
 @code {
-    private DashboardResponse dashboardResponse;
+    private DashboardResponse dashboardResponse = new();
 
     protected override async Task OnInitializedAsync()
     {
-        //dashboardResponse = await DS.GetDashboardAsync();
+        dashboardResponse = await DS.GetDashboardAsync();
     }
 
+    private async Task OpenTaskDialog(TaskItem task)
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        var parameters = new DialogParameters
+        {
+            { "Task", task }
+        };
+        var dialog = await DialogService.ShowAsync<EditTaskDialog>("Edit Task", parameters, options);
+    }
+
+    private async Task OpenReminderDialog(Reminder reminder)
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        var parameters = new DialogParameters
+        {
+            { "Reminder", reminder }
+        };
+        var dialog = await DialogService.ShowAsync<EditReminderDialog>("Edit Reminder", parameters, options);
+    }
+
+    private void OpenNoteDetail(Note note)
+    {
+        // TODO: Navigate to note detail or open note editor
+    }
 }

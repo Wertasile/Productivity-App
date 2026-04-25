@@ -1,0 +1,233 @@
+@using System.Net
+@using System.Text.RegularExpressions
+@inject NoteService NoteService
+
+<div class="note-editor-page">
+    <div class="note-editor-topbar">
+        <div class="note-editor-breadcrumb" aria-label="Breadcrumb">
+            <span>@BreadcrumbRootLabel</span>
+            <span class="note-editor-breadcrumb-sep">›</span>
+            <span class="note-editor-breadcrumb-current">@BreadcrumbCurrentLabel</span>
+        </div>
+
+        <div class="note-editor-actions">
+            @if (ShowBackButton)
+            {
+                <button type="button" class="note-editor-save-btn" @onclick="CloseEditor">
+                    <span>Back</span>
+                </button>
+            }
+            <div class="note-editor-cloud-pill" title="Saved in the selected folder">
+                <svg class="note-editor-cloud-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M7 18h10a4 4 0 0 0 .7-7.95A5.5 5.5 0 0 0 7.2 9.7 3.8 3.8 0 0 0 7 18Z" fill="none"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+                <span>@savePillLabel</span>
+            </div>
+            <button type="button" class="note-editor-icon-btn" aria-label="Share" title="Share">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M16 8a3 3 0 1 0-2.8-4M6 14a3 3 0 1 0 2.8 4M18 12l-12 2" fill="none" stroke="currentColor"
+                          stroke-width="2" stroke-linecap="round"></path>
+                    <path d="M18 12l-12-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    </path>
+                </svg>
+            </button>
+            <button type="button" class="note-editor-icon-btn" aria-label="More" title="More options">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="5" r="1.6"></circle>
+                    <circle cx="12" cy="12" r="1.6"></circle>
+                    <circle cx="12" cy="19" r="1.6"></circle>
+                </svg>
+            </button>
+            <button type="button" class="note-editor-save-btn" @onclick="Save"
+                    disabled="@isSaving">@saveButtonLabel</button>
+        </div>
+    </div>
+
+    <div class="note-editor-toolbar-wrap">
+        <EditorToolbar EditorId="@editorId" EditorState="@editorState" />
+    </div>
+
+    <div class="note-editor-surface">
+        <TiptapEditor @key="editorId" EditorId="@editorId" InitialContent="@currentInitialHtml" OnChange="HandleChange"
+                      OnStateChange="HandleStateChange" />
+    </div>
+</div>
+
+@code {
+    private string editorId = Guid.NewGuid().ToString();
+    private TiptapEditor.EditorContentChangedArgs? content;
+    private TiptapEditor.EditorStateChangedArgs? editorState;
+    private Note noteModel = new();
+    private bool isSaving;
+    private bool hasSavedNote;
+    private string? loadedNoteId;
+    private string? loadedFolderId;
+    private string currentInitialHtml = DefaultInitialHtml;
+
+    [Parameter] public Note? Note { get; set; }
+    [Parameter] public string? FolderId { get; set; }
+    [Parameter] public bool ShowBackButton { get; set; }
+    [Parameter] public string BreadcrumbRootLabel { get; set; } = "Root";
+    [Parameter] public string BreadcrumbCurrentLabel { get; set; } = "New Note";
+    [Parameter] public EventCallback<Note> OnSaved { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private string saveButtonLabel => isSaving ? "Saving..." : hasSavedNote ? "Save Changes" : "Save";
+    private string savePillLabel => hasSavedNote ? "Saved in folder" : "Draft";
+
+    private const string DefaultInitialHtml =
+        """
+        <p class="note-date"></p>
+        <h1 class="note-title"></h1>
+        <p></p>
+        """;
+
+    protected override void OnParametersSet()
+    {
+        var incomingNoteId = Note?.Id;
+        var normalizedFolderId = NormalizeFolderId(FolderId);
+
+        if (incomingNoteId == loadedNoteId && normalizedFolderId == loadedFolderId)
+        {
+            return;
+        }
+
+        loadedNoteId = incomingNoteId;
+        loadedFolderId = normalizedFolderId;
+
+        noteModel = Note is null ? CreateNewNote(normalizedFolderId) : CloneNote(Note);
+        hasSavedNote = !string.IsNullOrWhiteSpace(noteModel.Id);
+        currentInitialHtml = string.IsNullOrWhiteSpace(noteModel.Content) ? DefaultInitialHtml : noteModel.Content;
+
+        content = null;
+        editorState = null;
+        editorId = Guid.NewGuid().ToString();
+    }
+
+    private void HandleChange(TiptapEditor.EditorContentChangedArgs editorContent)
+    {
+        content = editorContent;
+    }
+
+    private void HandleStateChange(TiptapEditor.EditorStateChangedArgs state)
+    {
+        editorState = state;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task Save()
+    {
+        if (isSaving)
+        {
+            return;
+        }
+
+        isSaving = true;
+
+        try
+        {
+            noteModel.Content = content?.Html ?? currentInitialHtml;
+            noteModel.Title = ExtractTitle(noteModel.Content);
+            noteModel.FolderId = ResolveFolderForSave();
+            noteModel.EntityType = "NOTE";
+
+            if (hasSavedNote && !string.IsNullOrWhiteSpace(noteModel.Id))
+            {
+                noteModel = await NoteService.UpdateNote(noteModel);
+            }
+            else
+            {
+                var createdNote = await NoteService.CreateNote(noteModel);
+                if (createdNote is not null)
+                {
+                    noteModel = createdNote;
+                    hasSavedNote = true;
+                }
+            }
+
+            if (hasSavedNote)
+            {
+                await OnSaved.InvokeAsync(noteModel);
+            }
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task CloseEditor()
+    {
+        await OnClose.InvokeAsync();
+    }
+
+    private string? ResolveFolderForSave()
+    {
+        if (hasSavedNote && !string.IsNullOrWhiteSpace(noteModel.Id))
+        {
+            return NormalizeFolderId(noteModel.FolderId);
+        }
+
+        return NormalizeFolderId(FolderId);
+    }
+
+    private static string? NormalizeFolderId(string? folderId)
+    {
+        return string.IsNullOrWhiteSpace(folderId) || folderId == "ROOT" ? null : folderId;
+    }
+
+    private static Note CreateNewNote(string? folderId)
+    {
+        return new Note
+        {
+            FolderId = folderId,
+            EntityType = "NOTE"
+        };
+    }
+
+    private static Note CloneNote(Note source)
+    {
+        return new Note
+        {
+            Id = source.Id,
+            UserId = source.UserId,
+            FolderId = source.FolderId,
+            EntityType = source.EntityType,
+            Title = source.Title,
+            Content = source.Content,
+            CreatedAt = source.CreatedAt,
+            UpdatedAt = source.UpdatedAt
+        };
+    }
+
+    private static string ExtractTitle(string html)
+    {
+        if (string.IsNullOrWhiteSpace(html))
+        {
+            return "Untitled Note";
+        }
+
+        var headingMatch = Regex.Match(html, "<h1[^>]*>(.*?)</h1>", RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        var heading = headingMatch.Success ? SanitizeText(headingMatch.Groups[1].Value) : string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(heading))
+        {
+            return heading;
+        }
+
+        var plainText = SanitizeText(html);
+        if (string.IsNullOrWhiteSpace(plainText))
+        {
+            return "Untitled Note";
+        }
+
+        return plainText.Length <= 64 ? plainText : $"{plainText[..64].TrimEnd()}...";
+    }
+
+    private static string SanitizeText(string value)
+    {
+        var withoutTags = Regex.Replace(value, "<.*?>", " ");
+        return WebUtility.HtmlDecode(withoutTags).Trim();
+    }
+}

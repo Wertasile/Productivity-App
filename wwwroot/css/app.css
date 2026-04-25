@@ -1,59 +1,102 @@
 html, body {
     font-family: 'DM Sans','Helvetica Neue', Helvetica, Arial, sans-serif;
-    background-color: #F6F2F9;
+    background-color: #FEFCF1;
 }
 
 
 :root {
-    --light-green: #D1FCE8;
-    --primary-green: #7BF2AA;
-    --secondary-green: #446C58;
-    --light-lavendar: #D3CCFC;
-    --primary-lavendar: #A78CFB;
-    --secondary-lavendar: #58446C;
-    --light-red: #FCD1D1;
-    --primary-red: #F48E8E;
-    --secondary-red: #744848;
-    --light-blue: #CBEDFF;
-    --primary-blue: #88C1FF;
-    --secondary-blue: #485D74;
+    --task-colour: #504BEF;
+    --reminder-colour: #F67ADF;
+    --general-colour: #69663C;
 }
-h1 {
-    font-family: 'DM Sans','Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif; 
-    font-size: 36px ;
+
+.title {
+    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
+    font-size: 48px;
     font-weight: 800;
 }
 
-h2 {
-    font-family: 'DM Sans','Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
-    font-size:  24px ;
+h1 {
+    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
+    font-size: 24px ;
+    line-height: 32px;
     font-weight: 700;
 }
 
+h2 {
+    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
+    font-size:  20px ;
+    font-weight: 500;
+}
+
 h3 {
-    font-family: 'DM Sans','Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
     font-size: 20px ;
     font-weight: 600;
 }
 
-h4 {
-    font-family: 'DM Sans','Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
-    font-size: 16px;
+p, div, .std-text {
+    font-family: 'Inter', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 19.5px;
+    color: #646557;
+}
+
+.sub-header {
+    font-family: 'Inter', Tahoma, Geneva, Verdana, sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.note-header {
+    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
+    font-size: 20px;
+    line-height: 28px;
     font-weight: 500;
 }
 
-div {
-    font-family: 'Inter',Calibri, 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
-    font-size: 13px;
+.lil-text{
+    font-family: 'Inter', Tahoma, Geneva, Verdana, sans-serif;
+    font-weight: 200;
+    font-size: 12px;
 }
+
+.primary-btn {
+    background-color: #69663C;
+    border-radius: 9999px;
+    min-width: 125px;
+    padding: 50px 12px;
+    box-shadow: 0px 1px 2px 0 rgba(255, 255, 255, 0.5);
+    color: white;
+}
+
+.secondary-btn {
+    border-radius: 9999px;
+    min-width: 125px;
+    padding: 50px 12px;
+    color: #69663C;
+}
+
+.icon-primary-btn{
+
+}
+
+.icon-task-btn{
+
+}
+
+.icon-reminder-btn{
+}
+
 h1:focus {
     outline: none;
 }
 
-button, .btn {
+.btn {
     border-radius: 25px;
-    min-width: 100px;
-    padding: 5px 20px;
+    min-width: 125px;
+    padding: 50px 12px;
     font-family: 'DM Sans','Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
     font-size: 14px;
 }
@@ -213,5 +256,397 @@ code {
     border-radius: 100px;
     align-content: center;
     text-align: center;
+}
+
+.icon-button {
+    display: inline-flex;
+    padding: 8px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(186, 186, 169, 0.3);
+    background: rgba(255, 252, 245, 0.95);
+    border-radius: 999px;
+    width: 46px;
+    height: 46px;
+    font-size: 2rem;
+    line-height: 1;
+    color: #6f6847;
+    cursor: pointer;
+    transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+    .icon-button:hover {
+        transform: translateY(-1px);
+        background: white;
+        box-shadow: 0 14px 24px rgba(95, 87, 55, 0.08);
+    }
+
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.9rem;
+    padding: 0.75rem;
+    border: 1px solid #d8d2eb;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.toolbar button {
+    min-width: 0;
+    padding: 0.45rem 0.95rem;
+    border: 1px solid var(--primary-lavendar);
+    background: white;
+    color: var(--secondary-lavendar);
+}
+
+.toolbar button:hover {
+    background: var(--light-lavendar);
+}
+
+.note-editor-page {
+    max-width: 1020px;
+    margin: 0 auto;
+    padding: 0.25rem 0.4rem 2.5rem;
+}
+
+.note-editor-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.6rem 0.4rem;
+}
+
+.note-editor-breadcrumb {
+    color: rgba(105, 102, 60, 0.65);
+    font-size: 14px;
+    font-family: 'Inter', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.note-editor-breadcrumb-current {
+    color: rgba(105, 102, 60, 0.85);
+    font-weight: 600;
+}
+
+.note-editor-breadcrumb-sep {
+    padding: 0 0.4rem;
+    opacity: 0.7;
+}
+
+.note-editor-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.note-editor-cloud-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.35rem 0.75rem;
+    border: 1px solid rgba(186, 186, 169, 0.45);
+    background: rgba(255, 252, 245, 0.85);
+    border-radius: 999px;
+    color: rgba(105, 102, 60, 0.85);
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    user-select: none;
+}
+
+.note-editor-cloud-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.note-editor-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    border: 1px solid rgba(186, 186, 169, 0.35);
+    background: rgba(255, 252, 245, 0.75);
+    color: rgba(105, 102, 60, 0.85);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.note-editor-icon-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+.note-editor-icon-btn:hover {
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 14px 24px rgba(95, 87, 55, 0.08);
+}
+
+.note-editor-save-btn {
+    border: 0;
+    padding: 0.55rem 1.15rem;
+    border-radius: 999px;
+    background: #6e6a3f;
+    color: #fff;
+    font-family: 'Inter', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    box-shadow: 0 10px 18px rgba(95, 87, 55, 0.14);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+.note-editor-save-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.02);
+    box-shadow: 0 16px 26px rgba(95, 87, 55, 0.18);
+}
+
+.note-editor-toolbar-wrap {
+    display: flex;
+    justify-content: center;
+    padding: 0.4rem 0.4rem 1rem;
+}
+
+.note-editor-toolbar {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.55rem 0.65rem;
+    border-radius: 999px;
+    border: 1px solid rgba(186, 186, 169, 0.35);
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 18px 40px rgba(95, 87, 55, 0.08);
+    backdrop-filter: blur(10px);
+}
+
+.note-editor-toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 34px;
+    border-radius: 12px;
+    border: 0;
+    background: transparent;
+    color: rgba(73, 70, 45, 0.9);
+    transition: background 0.15s ease, transform 0.15s ease, color 0.15s ease;
+}
+
+.note-editor-toolbar-btn:hover {
+    background: rgba(186, 186, 169, 0.18);
+    transform: translateY(-1px);
+}
+
+.note-editor-toolbar-btn.is-active {
+    background: rgba(110, 106, 63, 0.12);
+    color: rgba(73, 70, 45, 1);
+}
+
+.note-editor-toolbar-text {
+    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
+    font-weight: 800;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.note-editor-toolbar-icon {
+    width: 20px;
+    height: 20px;
+    color: currentColor;
+}
+
+.note-editor-toolbar-divider {
+    width: 1px;
+    height: 20px;
+    background: rgba(186, 186, 169, 0.5);
+    margin: 0 0.2rem;
+}
+
+.note-editor-surface {
+    padding: 0.2rem 0.4rem 0.8rem;
+}
+
+.note-editor-paper {
+    border: 0;
+    border-radius: 28px;
+    background: linear-gradient(to bottom, rgba(105, 102, 60, 0.08), rgba(105, 102, 60, 0.02));
+    box-shadow: 0 24px 56px rgba(95, 87, 55, 0.10);
+    overflow: hidden;
+}
+
+.editor-wrapper.note-editor-paper .ProseMirror {
+    --rule-line: rgba(105, 102, 60, 0.22);
+    --rule-gap: 44px;
+
+    padding: 3.8rem 5.2rem 4.2rem;
+    min-height: 640px;
+    max-width: 860px;
+    margin: 0 auto;
+    background:
+        /* soft paper tone */
+        radial-gradient(1200px 900px at 50% -10%, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0) 55%),
+        /* notebook ruled lines */
+        repeating-linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0) 0px,
+            rgba(255, 255, 255, 0) calc(var(--rule-gap) - 1px),
+            var(--rule-line) calc(var(--rule-gap) - 1px),
+            var(--rule-line) var(--rule-gap)
+        );
+    background-attachment: local;
+    color: rgba(73, 70, 45, 0.92);
+}
+
+.editor-wrapper.note-editor-paper .ProseMirror p {
+    font-family: 'Inter', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 15px;
+    line-height: 1.9;
+    color: rgba(73, 70, 45, 0.80);
+}
+
+.editor-wrapper.note-editor-paper .ProseMirror .note-date {
+    font-size: 11px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    margin: 0 0 0.9rem;
+    color: rgba(105, 102, 60, 0.70);
+}
+
+.editor-wrapper.note-editor-paper .ProseMirror .note-title {
+    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
+    font-weight: 600;
+    font-style: italic;
+    font-size: 64px;
+    line-height: 1.03;
+    margin: 0 0 1.2rem;
+    color: rgba(73, 70, 45, 0.92);
+}
+
+.editor-wrapper.note-editor-paper .ProseMirror .note-tags {
+    margin: 0 0 1.4rem;
+}
+
+.note-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-right: 0.5rem;
+    color: rgba(73, 70, 45, 0.75);
+    border: 1px solid rgba(186, 186, 169, 0.45);
+    background: rgba(255, 255, 255, 0.55);
+}
+
+.note-tag--lav {
+    background: rgba(242, 229, 255, 0.75);
+    border-color: rgba(203, 166, 255, 0.55);
+}
+
+.note-tag--blue {
+    background: rgba(226, 236, 255, 0.8);
+    border-color: rgba(160, 192, 255, 0.55);
+}
+
+.editor-wrapper.note-editor-paper .ProseMirror .note-quote {
+    text-align: center;
+    margin: 1.2rem 0;
+    color: rgba(73, 70, 45, 0.72);
+}
+
+.editor-wrapper.note-editor-paper .ProseMirror .note-spacer {
+    margin: 3rem 0 0;
+}
+
+.editor-wrapper.note-editor-paper .ProseMirror a {
+    color: rgba(73, 70, 45, 0.92);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.editor-wrapper.note-editor-paper .ProseMirror img {
+    max-width: 100%;
+    border-radius: 18px;
+    display: block;
+    margin: 1.2rem auto;
+    box-shadow: 0 18px 40px rgba(95, 87, 55, 0.12);
+}
+
+@media (max-width: 920px) {
+    .editor-wrapper.note-editor-paper .ProseMirror {
+        padding: 3.2rem 2.2rem 3.2rem;
+    }
+
+    .editor-wrapper.note-editor-paper .ProseMirror .note-title {
+        font-size: 44px;
+    }
+}
+
+@media (max-width: 520px) {
+    .note-editor-topbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .note-editor-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .note-editor-cloud-pill {
+        display: none;
+    }
+}
+
+.editor-wrapper {
+    overflow: hidden;
+    min-height: 320px;
+    border: 1px solid #d8d2eb;
+    border-radius: 24px;
+    background: white;
+    box-shadow: 0 18px 40px rgba(88, 68, 108, 0.08);
+}
+
+.editor-host,
+.editor-surface {
+    min-height: 320px;
+}
+
+.editor-wrapper .ProseMirror {
+    min-height: 320px;
+    padding: 1.25rem 1.5rem;
+    outline: none;
+    color: #2c2238;
+    line-height: 1.7;
+}
+
+.editor-wrapper .ProseMirror h1,
+.editor-wrapper .ProseMirror h2 {
+    margin-bottom: 0.75rem;
+}
+
+.editor-wrapper .ProseMirror p,
+.editor-wrapper .ProseMirror ul,
+.editor-wrapper .ProseMirror ol,
+.editor-wrapper .ProseMirror pre {
+    margin-bottom: 0.9rem;
+}
+
+.editor-wrapper .ProseMirror ul,
+.editor-wrapper .ProseMirror ol {
+    padding-left: 1.5rem;
+}
+
+.editor-wrapper .ProseMirror pre {
+    padding: 0.85rem 1rem;
+    border-radius: 16px;
+    background: #f4f0ff;
+    color: #36264a;
 }
 

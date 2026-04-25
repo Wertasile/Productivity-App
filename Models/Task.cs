@@ -1,9 +1,9 @@
 ﻿
 public class TaskItem : BaseItem
 {
-    public string Id { get; set; }
+    //public string Id { get; set; }
 
-    public string UserId { get; set; }
+    //public string UserId { get; set; }
 
     public string parentTaskId { get; set; } = null;// if task is subtask
 
@@ -21,7 +21,7 @@ public class TaskItem : BaseItem
 
     public DateTime DueDate { get; set; }
 
-    public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
+    //public DateTime CreatedAt { get; set; }
+    //public DateTime UpdatedAt { get; set; }
 }
 

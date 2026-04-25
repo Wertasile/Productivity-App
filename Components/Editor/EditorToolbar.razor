@@ -1,0 +1,99 @@
+@inject IJSRuntime JS
+
+<div class="note-editor-toolbar" role="toolbar" aria-label="Editor toolbar">
+    <button type="button"
+            class="@ToolbarButtonClass(IsActive: EditorState?.IsBold ?? false)"
+            title="Bold"
+            aria-label="Bold"
+            @onclick='() => Exec("bold")'>
+        <span class="note-editor-toolbar-text">B</span>
+    </button>
+
+    <button type="button"
+            class="@ToolbarButtonClass(IsActive: EditorState?.IsItalic ?? false)"
+            title="Italic"
+            aria-label="Italic"
+            @onclick='() => Exec("italic")'>
+        <span class="note-editor-toolbar-text" style="font-style: italic;">I</span>
+    </button>
+
+    <button type="button"
+            class="@ToolbarButtonClass(IsActive: EditorState?.IsUnderline ?? false)"
+            title="Underline"
+            aria-label="Underline"
+            @onclick='() => Exec("underline")'>
+        <span class="note-editor-toolbar-text" style="text-decoration: underline;">U</span>
+    </button>
+
+    <div class="note-editor-toolbar-divider" aria-hidden="true"></div>
+
+    <button type="button"
+            class="@ToolbarButtonClass(IsActive: EditorState?.IsBulletList ?? false)"
+            title="Bulleted list"
+            aria-label="Bulleted list"
+            @onclick='() => Exec("bulletList")'>
+        <svg class="note-editor-toolbar-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="6" cy="7" r="1.5"></circle>
+            <circle cx="6" cy="12" r="1.5"></circle>
+            <circle cx="6" cy="17" r="1.5"></circle>
+            <path d="M10 7h11M10 12h11M10 17h11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+        </svg>
+    </button>
+
+    <button type="button"
+            class="@ToolbarButtonClass(IsActive: EditorState?.IsOrderedList ?? false)"
+            title="Numbered list"
+            aria-label="Numbered list"
+            @onclick='() => Exec("orderedList")'>
+        <svg class="note-editor-toolbar-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M10 7h11M10 12h11M10 17h11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+            <path d="M4.5 6.2h2.5M5.5 6.2V5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+            <path d="M4.5 12h2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+            <path d="M4.8 11.2c.5-.6 1.7-.8 2.2 0 .3.5.1 1.1-.4 1.4-.5.3-1.1.7-1.6 1.2h2.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+            <path d="M4.8 16.2c.6-.7 2-.8 2.5 0 .4.6 0 1.2-.6 1.4.7.2 1.1.9.6 1.5-.6.8-2.2.6-2.7-.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+    </button>
+
+    <div class="note-editor-toolbar-divider" aria-hidden="true"></div>
+
+    <button type="button"
+            class="@ToolbarButtonClass(IsActive: false)"
+            title="Insert image"
+            aria-label="Insert image"
+            @onclick='() => Exec("image")'>
+        <svg class="note-editor-toolbar-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11A2.5 2.5 0 0 1 17.5 20h-11A2.5 2.5 0 0 1 4 17.5v-11Z" fill="none" stroke="currentColor" stroke-width="2"></path>
+            <path d="M8.5 10a1.2 1.2 0 1 0 0-2.4A1.2 1.2 0 0 0 8.5 10Z" fill="currentColor"></path>
+            <path d="M20 15l-5-5-6 7-2-2-3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+    </button>
+
+    <button type="button"
+            class="@ToolbarButtonClass(IsActive: EditorState?.IsLink ?? false)"
+            title="Link"
+            aria-label="Link"
+            @onclick='() => Exec("link")'>
+        <svg class="note-editor-toolbar-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M10 13a5 5 0 0 1 0-7l1-1a5 5 0 0 1 7 7l-1 1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+            <path d="M14 11a5 5 0 0 1 0 7l-1 1a5 5 0 0 1-7-7l1-1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+        </svg>
+    </button>
+</div>
+
+@code {
+    [Parameter] public string EditorId { get; set; } = string.Empty;
+    [Parameter] public ActualBlazorStandAloneAppSPA.Components.Editor.TiptapEditor.EditorStateChangedArgs? EditorState { get; set; }
+
+    private async Task Exec(string command)
+    {
+        if (string.IsNullOrWhiteSpace(EditorId))
+        {
+            return;
+        }
+
+        await JS.InvokeVoidAsync("execCommand", EditorId, command);
+    }
+
+    private static string ToolbarButtonClass(bool IsActive)
+        => IsActive ? "note-editor-toolbar-btn is-active" : "note-editor-toolbar-btn";
+}

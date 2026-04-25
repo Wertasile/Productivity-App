@@ -1,4 +1,5 @@
-﻿@* @inject AuthService AuthService *@
+@* @inject AuthService AuthService *@
+@inject AppSessionService AppSessionService
 @inject NavigationManager Navigation
 
 <EditForm Model="@registerModel" OnValidSubmit="@HandleValidSubmit">
@@ -18,6 +19,7 @@
     <button type="submit">Register</button>
 
     <button type="button" @onclick="() => OnSwitch.InvokeAsync(AuthState.Login)">Got an account, Login here!</button>
+    <button type="button" @onclick="ContinueWithoutAccountAsync">Continue without account</button>
 </EditForm>
 
 @code {
@@ -26,7 +28,7 @@
 
     private RegisterModel registerModel = new();
 
-    private async Task HandleValidSubmit()
+    private Task HandleValidSubmit()
     {
         // var response = await AuthService.Register(registerModel.Username, registerModel.Email, registerModel.Password);
         // if (response.Success)
@@ -37,15 +39,21 @@
         // {
         //     Console.WriteLine(response.ErrorMessage);
         // }
+        return Task.CompletedTask;
+    }
+
+    private async Task ContinueWithoutAccountAsync()
+    {
+        await AppSessionService.ContinueAsGuestAsync();
+        Navigation.NavigateTo("/dashboard");
     }
 
     public class RegisterModel
     {
+        public string Username { get; set; } = string.Empty;
 
-        public string Username { get; set; }
+        public string Email { get; set; } = string.Empty;
 
-        public string Email { get; set; }
-
-        public string Password { get; set; }
+        public string Password { get; set; } = string.Empty;
     }
 }

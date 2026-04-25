@@ -8,15 +8,22 @@ using static System.Net.WebRequestMethods;
 public class AuthService
 {
     private readonly TokenStore _store;
+    private readonly SessionStore _sessionStore;
+    private readonly CustomAuthStateProvider _authStateProvider;
     private readonly HttpClient _httpClient;
 
     private const string COGNITO_ENDPOINT = "https://cognito-idp.us-east-1.amazonaws.com/";
     private const string CLIENT_ID = "6b61u0jrrv14ppccnrqrgk814k";
 
-    public AuthService(TokenStore store)
+    public AuthService(
+        TokenStore store,
+        SessionStore sessionStore,
+        CustomAuthStateProvider authStateProvider)
     {
         _httpClient = new HttpClient();
         _store = store;
+        _sessionStore = sessionStore;
+        _authStateProvider = authStateProvider;
     }
 
     // create a http request message to send to the cognito endpoint
@@ -200,6 +207,8 @@ public class AuthService
         };
 
         await _store.SaveTokensAsync(tokens);
+        await _sessionStore.RemoveGuestSessionAsync();
+        _authStateProvider.NotifyUserAuthentication();
 
         if (tokens == null)
         {
@@ -251,5 +260,7 @@ public class AuthService
         }
 
         await _store.RemoveTokensAsync();
+        await _sessionStore.RemoveGuestSessionAsync();
+        _authStateProvider.NotifyUserLogout();
     }
 }

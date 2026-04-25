@@ -1,27 +1,136 @@
 @using MudBlazor
-@inject MudBlazor.IDialogService DialogService
+@inject ItemService ItemService
 
-<MudDialog Style="">
-    <TitleContent>Dialog Title
-    </TitleContent>
+<MudDialog>
+    <TitleContent>Edit Task</TitleContent>
     <DialogContent>
-        @Task.Title
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4">
+                @errorMessage
+            </MudAlert>
+        }
+
+        <div class="d-flex flex-column gap-3">
+            <MudTextField @bind-Value="editModel.Title"
+                          Label="Title"
+                          Variant="Variant.Outlined"
+                          Required="true" />
+
+            <MudTextField @bind-Value="editModel.Description"
+                          Label="Description"
+                          Variant="Variant.Outlined"
+                          Lines="4" />
+
+            <MudNumericField T="int"
+                             @bind-Value="editModel.Progress"
+                             Label="Progress"
+                             Min="0"
+                             Max="100"
+                             Variant="Variant.Outlined" />
+
+            <MudCheckBox @bind-Value="editModel.IsCompleted" Label="Completed" />
+
+            <MudDatePicker Label="Due date"
+                           Date="taskDate"
+                           DateChanged="OnTaskDateChanged"
+                           Variant="Variant.Outlined" />
+
+            <MudTimePicker Label="Due time"
+                           Time="taskTime"
+                           TimeChanged="OnTaskTimeChanged"
+                           AmPm="true"
+                           Variant="Variant.Outlined" />
+        </div>
     </DialogContent>
     <DialogActions>
+        <MudButton Color="Color.Error" OnClick="DeleteAsync">Delete</MudButton>
         <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" OnClick="Submit">OK</MudButton>
+        <MudButton Color="Color.Primary" OnClick="SubmitAsync">Save</MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
-
     [CascadingParameter]
-    private IMudDialogInstance MudDialog { get; set; }
+    private IMudDialogInstance MudDialog { get; set; } = default!;
 
     [Parameter]
     public TaskItem Task { get; set; } = new();
 
-    private void Submit() => MudDialog.Close(DialogResult.Ok(true));
+    private readonly TaskItem editModel = new();
+    private DateTime? taskDate;
+    private TimeSpan? taskTime;
+    private string? errorMessage;
+
+    protected override void OnInitialized()
+    {
+        Console.WriteLine($"Initializing EditTaskDialog with Task: {Task.Title} (ID: {Task.Id})");
+
+        editModel.Id = Task.Id;
+        editModel.UserId = Task.UserId;
+        editModel.parentTaskId = Task.parentTaskId;
+        editModel.Title = Task.Title;
+        editModel.Description = Task.Description;
+        editModel.Progress = Task.Progress;
+        editModel.IsCompleted = Task.IsCompleted;
+        editModel.CompletionDate = Task.CompletionDate;
+        editModel.DueDate = Task.DueDate;
+        editModel.EntityType = Task.EntityType;
+        editModel.CreatedAt = Task.CreatedAt;
+        editModel.UpdatedAt = Task.UpdatedAt;
+
+        taskDate = editModel.DueDate.Date;
+        taskTime = editModel.DueDate.TimeOfDay;
+    }
+
+    private void OnTaskDateChanged(DateTime? value)
+    {
+        taskDate = value;
+        editModel.DueDate = CombineDateAndTime(taskDate, taskTime);
+    }
+
+    private void OnTaskTimeChanged(TimeSpan? value)
+    {
+        taskTime = value;
+        editModel.DueDate = CombineDateAndTime(taskDate, taskTime);
+    }
+
+    private async System.Threading.Tasks.Task SubmitAsync()
+    {
+        if (string.IsNullOrWhiteSpace(editModel.Title))
+        {
+            errorMessage = "Task title is required.";
+            return;
+        }
+
+        editModel.Progress = Math.Clamp(editModel.Progress, 0, 100);
+        editModel.DueDate = CombineDateAndTime(taskDate, taskTime);
+        editModel.CompletionDate = editModel.IsCompleted ? editModel.CompletionDate ?? DateTime.UtcNow : null;
+        editModel.UpdatedAt = DateTime.UtcNow;
+
+        var updatedItem = await ItemService.UpdateItemAsync(editModel);
+
+        if (updatedItem is null)
+        {
+            errorMessage = "The task could not be updated.";
+            return;
+        }
+
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private async System.Threading.Tasks.Task DeleteAsync()
+    {
+        await ItemService.DeleteItemAsync(editModel.Id);
+        MudDialog.Close(DialogResult.Ok(true));
+    }
 
     private void Cancel() => MudDialog.Cancel();
+
+    private static DateTime CombineDateAndTime(DateTime? date, TimeSpan? time)
+    {
+        var actualDate = (date ?? DateTime.Today).Date;
+        var actualTime = time ?? TimeSpan.Zero;
+        return actualDate.Add(actualTime);
+    }
 }

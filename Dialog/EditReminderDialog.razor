@@ -1,26 +1,122 @@
+@using MudBlazor
+@inject ItemService ItemService
 
-@inject MudBlazor.IDialogService DialogService
-
-<MudDialog Style="">
-    <TitleContent>Dialog Title
-    </TitleContent>
+<MudDialog>
+    <TitleContent>Edit Reminder</TitleContent>
     <DialogContent>
-        @Reminder.Name
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4">
+                @errorMessage
+            </MudAlert>
+        }
+
+        <div class="d-flex flex-column gap-3">
+            <MudTextField @bind-Value="editModel.Name"
+                          Label="Name"
+                          Variant="Variant.Outlined"
+                          Required="true" />
+
+            <MudTextField @bind-Value="editModel.Description"
+                          Label="Description"
+                          Variant="Variant.Outlined"
+                          Lines="4" />
+
+            <MudCheckBox @bind-Value="editModel.IsAcknowledged" Label="Acknowledged" />
+
+            <MudDatePicker Label="Reminder date"
+                           Date="reminderDate"
+                           DateChanged="OnReminderDateChanged"
+                           Variant="Variant.Outlined" />
+
+            <MudTimePicker Label="Reminder time"
+                           Time="reminderTime"
+                           TimeChanged="OnReminderTimeChanged"
+                           AmPm="true"
+                           Variant="Variant.Outlined" />
+        </div>
     </DialogContent>
     <DialogActions>
+        <MudButton Color="Color.Error" OnClick="DeleteAsync">Delete</MudButton>
         <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" OnClick="Submit">OK</MudButton>
+        <MudButton Color="Color.Primary" OnClick="SubmitAsync">Save</MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
     [CascadingParameter]
-    private IMudDialogInstance MudDialog { get; set; }
+    private IMudDialogInstance MudDialog { get; set; } = default!;
 
     [Parameter]
     public Reminder Reminder { get; set; } = new();
 
-    private void Submit() => MudDialog.Close(DialogResult.Ok(true));
+    private readonly Reminder editModel = new();
+    private DateTime? reminderDate;
+    private TimeSpan? reminderTime;
+    private string? errorMessage;
+
+    protected override void OnInitialized()
+    {
+        editModel.Id = Reminder.Id;
+        editModel.UserId = Reminder.UserId;
+        editModel.Name = Reminder.Name;
+        editModel.Description = Reminder.Description;
+        editModel.IsAcknowledged = Reminder.IsAcknowledged;
+        editModel.ReminderDate = Reminder.ReminderDate;
+        editModel.EntityType = Reminder.EntityType;
+        editModel.CreatedAt = Reminder.CreatedAt;
+        editModel.UpdatedAt = Reminder.UpdatedAt;
+
+        reminderDate = editModel.ReminderDate.Date;
+        reminderTime = editModel.ReminderDate.TimeOfDay;
+    }
+
+    private void OnReminderDateChanged(DateTime? value)
+    {
+        reminderDate = value;
+        editModel.ReminderDate = CombineDateAndTime(reminderDate, reminderTime);
+    }
+
+    private void OnReminderTimeChanged(TimeSpan? value)
+    {
+        reminderTime = value;
+        editModel.ReminderDate = CombineDateAndTime(reminderDate, reminderTime);
+    }
+
+    private async System.Threading.Tasks.Task SubmitAsync()
+    {
+        if (string.IsNullOrWhiteSpace(editModel.Name))
+        {
+            errorMessage = "Reminder name is required.";
+            return;
+        }
+
+        editModel.ReminderDate = CombineDateAndTime(reminderDate, reminderTime);
+        editModel.UpdatedAt = DateTime.UtcNow;
+
+        var updatedItem = await ItemService.UpdateItemAsync(editModel);
+
+        if (updatedItem is null)
+        {
+            errorMessage = "The reminder could not be updated.";
+            return;
+        }
+
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private async System.Threading.Tasks.Task DeleteAsync()
+    {
+        await ItemService.DeleteItemAsync(editModel.Id);
+        MudDialog.Close(DialogResult.Ok(true));
+    }
 
     private void Cancel() => MudDialog.Cancel();
+
+    private static DateTime CombineDateAndTime(DateTime? date, TimeSpan? time)
+    {
+        var actualDate = (date ?? DateTime.Today).Date;
+        var actualTime = time ?? TimeSpan.Zero;
+        return actualDate.Add(actualTime);
+    }
 }

@@ -1,38 +1,199 @@
-﻿@page "/notes"
+@page "/notes"
 @using Microsoft.AspNetCore.Authorization
 @layout MainLayout
 @attribute [Authorize]
+@inject NoteService NoteService
+@inject FolderService FolderService
 
-<h3>Notes</h3>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3>Notes</h3>
+        <div>Create and edit notes for the current account or guest session.</div>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(statusMessage))
+{
+    <div class="alert alert-info">@statusMessage</div>
+}
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-body d-flex flex-column gap-3">
+                <h5>@(isEditing ? "Edit Note" : "New Note")</h5>
+
+                <div>
+                    <label class="form-label">Title</label>
+                    <InputText class="form-control" @bind-Value="noteModel.Title" />
+                </div>
+
+                <div>
+                    <label class="form-label">Folder</label>
+                    <InputSelect class="form-select" @bind-Value="noteModel.FolderId">
+                        <option value="">Root</option>
+                        @foreach (var folder in folders)
+                        {
+                            <option value="@folder.Id">@folder.Name</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                <div>
+                    <label class="form-label">Content</label>
+                    <InputTextArea class="form-control" rows="10" @bind-Value="noteModel.Content" />
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary" @onclick="SaveNoteAsync">
+                        @(isEditing ? "Update note" : "Create note")
+                    </button>
+                    <button class="btn btn-outline-secondary" @onclick="ResetForm">Clear</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        @if (notes.Count == 0)
+        {
+            <div class="alert alert-light border">No notes yet. Create your first one here.</div>
+        }
+        else
+        {
+            <div class="d-flex flex-column gap-3">
+                @foreach (var note in notes)
+                {
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start gap-3">
+                                <div>
+                                    <h5 class="mb-1">@note.Title</h5>
+                                    <div class="text-muted mb-2">@GetFolderLabel(note.FolderId)</div>
+                                    <div>@GetPreview(note.Content)</div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => EditNote(note)">Edit</button>
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteNoteAsync(note)">Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
 
 @code {
-    public List<Note> notes;
+    public List<Note> notes = new();
+    public List<Folder> folders = new();
+    private Note noteModel = CreateEmptyNote();
+    private bool isEditing;
+    private string? statusMessage;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        // Code to retreive notes from a data source would go here. For now, we'll just create some sample notes.
+        await LoadNotes();
     }
 
     private async Task LoadNotes()
     {
-        
-        
+        notes = await NoteService.GetNotesAsync();
+        folders = await FolderService.GetFolders();
     }
-    private void AddNote()
-    {
 
+    private async Task SaveNoteAsync()
+    {
+        if (string.IsNullOrWhiteSpace(noteModel.Title))
+        {
+            statusMessage = "A note title is required.";
+            return;
+        }
+
+        noteModel.EntityType = "NOTE";
+        noteModel.FolderId = string.IsNullOrWhiteSpace(noteModel.FolderId) ? null : noteModel.FolderId;
+
+        if (isEditing)
+        {
+            await NoteService.UpdateNote(noteModel);
+            statusMessage = "Note updated.";
+        }
+        else
+        {
+            await NoteService.CreateNote(noteModel);
+            statusMessage = "Note created.";
+        }
+
+        ResetForm();
+        await LoadNotes();
     }
 
     private void EditNote(Note note)
     {
-        
+        isEditing = true;
+        noteModel = new Note
+        {
+            Id = note.Id,
+            UserId = note.UserId,
+            FolderId = note.FolderId,
+            Title = note.Title,
+            Content = note.Content,
+            EntityType = note.EntityType,
+            CreatedAt = note.CreatedAt,
+            UpdatedAt = note.UpdatedAt
+        };
+        statusMessage = null;
     }
 
-    private void DeleteNote(Note note)
+    private async Task DeleteNoteAsync(Note note)
     {
-            
+        await NoteService.DeleteNote(note);
+        statusMessage = $"Deleted '{note.Title}'.";
+
+        if (noteModel.Id == note.Id)
+        {
+            ResetForm();
+        }
+
+        await LoadNotes();
     }
 
+    private void ResetForm()
+    {
+        noteModel = CreateEmptyNote();
+        isEditing = false;
+    }
 
+    private string GetFolderLabel(string? folderId)
+    {
+        if (string.IsNullOrWhiteSpace(folderId))
+        {
+            return "Root";
+        }
 
+        return folders.FirstOrDefault(folder => folder.Id == folderId)?.Name ?? "Unknown folder";
+    }
+
+    private static Note CreateEmptyNote()
+    {
+        return new Note
+        {
+            Title = string.Empty,
+            Content = string.Empty,
+            FolderId = null,
+            EntityType = "NOTE"
+        };
+    }
+
+    private static string GetPreview(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return "Empty note";
+        }
+
+        var plainText = System.Text.RegularExpressions.Regex.Replace(content, "<.*?>", string.Empty).Trim();
+        return plainText.Length <= 180 ? plainText : $"{plainText[..180]}...";
+    }
 }

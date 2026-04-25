@@ -1,13 +1,10 @@
-﻿@page "/taskboard"
+@page "/taskboard"
 @using Microsoft.AspNetCore.Authorization
 @layout MainLayout
 @attribute [Authorize]
 @inject TaskBoardService taskBoardService
-@inject IJSRuntime JS
-@inject HttpClient Http
 @using System.Text.Json
 @inject IDialogService DialogService
-
 
 <div class="d-flex justify-content-between">
     <h2>TASKBOARD!</h2>
@@ -18,196 +15,166 @@
 </div>
 
 <div>
-    <h3>WEEK @currentWeekOfMonth, @(DateTime.Now.ToString("MMMM")) 2025</h3>
+    <h3>WEEK @currentWeekOfMonth, @(DateTime.Now.ToString("MMMM")) @DateTime.Now.Year</h3>
 </div>
 
 <div>
     FROM @weekData?.WeekStart.ToString("dd MMMM") TO @weekData?.WeekEnd.ToString("dd MMMM")
 </div>
 
-    <div class="d-flex flex-column gap-6">
+<div class="d-flex flex-column gap-6">
 
-    @* ROW 1 *@
-        <div class="day-header-wrapper">
-            <div class="time-col"></div>
-            @foreach (var day in Days)
-            {
-                <div class="day-header">
-                    @day.ToUpper()
-                    <h4>@DateTime.Now.AddDays(((int)Enum.Parse<DayOfWeek>(day, true) - (int)DateTime.Now.DayOfWeek + 7) %
-                                                                                                    7).ToString("dd")</h4>
-                </div>
-            }
-        </div>
+    <div class="day-header-wrapper">
+        <div class="time-col"></div>
+        @foreach (var day in Days)
+        {
+            <div class="day-header">
+                @day.ToUpper()
+                <h4>@DateTime.Now.AddDays(((int)Enum.Parse<DayOfWeek>(day, true) - (int)DateTime.Now.DayOfWeek + 7) % 7).ToString("dd")</h4>
+            </div>
+        }
+    </div>
 
-        <div class="d-flex gap-4 flex-column">
-            @for (int hour = 0; hour < 24; hour++)
-            {
-                <div class="time-row">
-                    <div class="time-col">@($"{hour}:00")</div>
+    <div class="d-flex gap-4 flex-column">
+        @for (int hour = 0; hour < 24; hour++)
+        {
+            <div class="time-row">
+                <div class="time-col">@($"{hour}:00")</div>
 
-                    @foreach (var day in Days)
-                    {
-                        <div class="calendar-cell">
-                            @* @RenderEvents(day, hour) *@
-
-                            @* key is (Enum.Parse<DayOfWeek>(day, true), hour) // convert day string to DayOfWeek enum, ignoring case sensitivity *@
-                            @* key is (Sunday, 4) i.e. (Day, hour). The day itself is represented by a number*@
-                            @if (Schedule.ContainsKey((Enum.Parse<DayOfWeek>(day, true), hour)))
+                @foreach (var day in Days)
+                {
+                    <div class="calendar-cell">
+                        @if (Schedule.ContainsKey((Enum.Parse<DayOfWeek>(day, true), hour)))
+                        {
+                            @foreach (var item in Schedule[(Enum.Parse<DayOfWeek>(day, true), hour)])
                             {
-                                @foreach (var item in Schedule[(Enum.Parse<DayOfWeek>(day, true), hour)])
+                                if (item is TaskItem task)
                                 {
-                                    if (item is TaskItem task)
-                                    {
-                                        <div class="event eventTask" @onclick="(e) => OpenTaskAsync(task)">
-                                            <div>@task.Title</div>
-                                            <div>@task.Progress %</div>
-                                        </div>
-                                    }
-                                    else if (item is Reminder reminder)
-                                    {
-                                        <div class="event eventReminder" @onclick="(e) => OpenReminderAsync(reminder)">
-                                            @reminder.Name
-                                        </div>
-                                    }
+                                    <div class="event eventTask" @onclick="() => OpenTaskAsync(task)">
+                                        <div>@task.Title</div>
+                                        <div>@task.Progress %</div>
+                                    </div>
+                                }
+                                else if (item is Reminder reminder)
+                                {
+                                    <div class="event eventReminder" @onclick="() => OpenReminderAsync(reminder)">
+                                        @reminder.Name
+                                    </div>
                                 }
                             }
-                        </div>
-                    }
-                </div>
-            }
-        </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
     </div>
+</div>
+
 @code {
+    private TaskBoardResponse? weekData;
+    private int currentWeekOfMonth;
 
-    TaskBoardResponse? weekData;
+    public List<string> Days = new()
+    {
+        "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
+    };
 
-    int currentWeekOfMonth;
+    private Dictionary<(DayOfWeek, int), List<BaseItem>> Schedule = new();
 
-    public List<String> Days = new List<string>() { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
-"Saturday" };
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTaskBoardAsync();
+    }
 
-    Dictionary<(DayOfWeek, int), List<BaseItem>> Schedule = new();
-
-    private Task OpenTaskAsync(TaskItem task)
+    private async Task OpenTaskAsync(TaskItem task)
     {
         var options = new DialogOptions { CloseOnEscapeKey = true };
         var parameters = new DialogParameters
         {
             { "Task", task }
         };
-        return DialogService.ShowAsync<EditTaskDialog>("Edit Task", parameters, options);
+
+        var dialog = await DialogService.ShowAsync<EditTaskDialog>("Edit Task", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadTaskBoardAsync();
+        }
     }
 
-    private Task OpenReminderAsync(Reminder reminder)
+    private async Task OpenReminderAsync(Reminder reminder)
     {
         var options = new DialogOptions { CloseOnEscapeKey = true };
         var parameters = new DialogParameters
         {
             { "Reminder", reminder }
         };
-        return DialogService.ShowAsync<EditReminderDialog>("Edit Reminder", parameters, options);
+
+        var dialog = await DialogService.ShowAsync<EditReminderDialog>("Edit Reminder", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadTaskBoardAsync();
+        }
     }
 
-    protected override async Task OnInitializedAsync()
+    private async Task LoadTaskBoardAsync()
     {
-        // Actual API call is commented out to avoid errors until the backend is implemented. You can uncomment it once the API
-        //is ready.
-        //weekData = await taskBoardService.GetWeekData();
+        weekData = await taskBoardService.GetTaskBoardAsync();
 
-        // Mock data for testing
-        weekData = await Http.GetFromJsonAsync<TaskBoardResponse>("sample-data/SampleTaskBoardResponse.json");
-
-        // cannot directly Console.WriteLine an JS object, so we serialize it to JSON string for logging
         var serialisedWeekData = JsonSerializer.Serialize(weekData, new JsonSerializerOptions
         {
-            WriteIndented = true // for better readability in the console
+            WriteIndented = true
         });
 
-
-        //Console.WriteLine(serialisedWeekData);
+        Console.WriteLine(serialisedWeekData);
 
         MapEvents();
-
         currentWeekOfMonth = GetWeekOfMonth();
     }
 
     public void MapEvents()
     {
-        // Task
+        Schedule.Clear();
+
+        if (weekData?.Items is null)
+        {
+            return;
+        }
+
         foreach (var item in weekData.Items)
         {
-            Console.WriteLine(item);
-            Console.WriteLine($"DateItems for {item} are below:");
-            Console.WriteLine(JsonSerializer.Serialize(item.Value, new JsonSerializerOptions
-            {
-                WriteIndented = true
-            }));
-            Console.WriteLine("========================================================");
-
             foreach (var dateItem in item.Value.Tasks)
             {
-                // Assuming dateItem has properties DateTime and EventName, you can adjust based on your actual data structure
-                AddEvent(dateItem.DueDate, dateItem, dateItem.EntityType);
+                AddEvent(dateItem.DueDate, dateItem);
             }
 
             foreach (var dateItem in item.Value.Reminders)
             {
-                // Assuming dateItem has properties DateTime and EventName, you can adjust based on your actual data structure
-                AddEvent(dateItem.ReminderDate, dateItem, dateItem.EntityType);
+                AddEvent(dateItem.ReminderDate, dateItem);
             }
         }
     }
 
-    public void AddEvent(DateTime dateTime, BaseItem theEvent, string EntityType)
+    public void AddEvent(DateTime dateTime, BaseItem theEvent)
     {
         var key = (dateTime.DayOfWeek, dateTime.Hour);
         if (!Schedule.ContainsKey(key))
         {
             Schedule[key] = new List<BaseItem>();
         }
+
         Schedule[key].Add(theEvent);
     }
 
-    // similar to accessing document and selectors in base JavaScript to render elements, we use RenderFragment in Blazor to
-    //dynamically render content based on the schedule
-    // RenderFragment RenderEvents(string dayName, int hour) => builder =>
-    // {
-    // var day = Enum.Parse<DayOfWeek>(dayName);
-    // var key = (day, hour);
-
-    // if (Schedule.ContainsKey(key))
-    // {
-    // foreach (var item in Schedule[key])
-    // {
-    // builder.OpenElement(0, "div");
-    // if (item is TaskItem task)
-    // {
-    // builder.AddAttribute(1, "class", "event eventTask");
-    // builder.AddContent(2, task.Title);
-    // }
-    // else if (item is Reminder reminder)
-    // {
-    // builder.AddAttribute(1, "class", "event eventReminder");
-    // builder.AddContent(2, reminder.Name);
-    // }
-
-    // builder.CloseElement();
-    // }
-    // }
-    // };
-
     public int GetWeekOfMonth()
     {
-        // get todays date and use it to get first day of month
         var firstDayOfMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-
-        // calculate the week of month based on the first day of month and todays date
-        int offset = (int)firstDayOfMonth.DayOfWeek; // returns an enumerated value where Sunday = 0, Monday = 1, ...,Saturday = 6, therefore needs to be typecast to int
-
+        int offset = (int)firstDayOfMonth.DayOfWeek;
         int weekOfMonth = ((DateTime.Now.Day + offset - 1) / 7) + 1;
 
         return weekOfMonth;
     }
-
 }

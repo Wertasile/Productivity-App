@@ -1,36 +1,723 @@
-﻿@page "/directory"
+@page "/directory"
 @using Microsoft.AspNetCore.Authorization
-@using System.Text.Json
+@using MudBlazor
+@using ActualBlazorStandAloneAppSPA.Components.Editor
 @layout MainLayout
 @attribute [Authorize]
 @inject FolderService FolderService
-<div class="d-flex rounded-1">
+@inject NoteService NoteService
+@inject NavigationManager Navigation
 
-    <div class="directory-left">
-        @* @foreach (var folder in rootFolderContent.)
+<PageTitle>Directory</PageTitle>
+
+<div class="directory-page">
+
+    @* HIERARCHICAL FILE DIRECTORY FOR NOTES AND FOLDERS *@
+    <aside class="directory-sidebar">
+        <div class="directory-sidebar-header">
+            <h1>File Directory</h1>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(statusMessage))
         {
+            <div class="directory-status">
+                <MudIcon Icon="@Icons.Material.Outlined.Info" />
+                <span>@statusMessage</span>
+            </div>
+        }
+
+        <section class="directory-tree-panel">
+            <div class="directory-tree">
+                @* Root "Work" node *@
+                <div class="tree-node-row">
+                    <button type="button" class="tree-node-chevron-btn" @onclick="ToggleRootExpand"
+                            aria-label="Toggle Work folder">
+                        <MudIcon
+                        Icon="@(rootExpanded ? Icons.Material.Outlined.ExpandMore : Icons.Material.Outlined.ChevronRight)"
+                        Style="font-size:16px;color:#69663c;" />
+                    </button>
+                    <button type="button" class="tree-node @(currentFolderId == RootFolderId ? "tree-node-active" : "")"
+                            @onclick="GoToRootAsync">
+                        <span class="tree-node-icon">
+                            <MudIcon
+                            Icon="@(rootExpanded ? Icons.Material.Outlined.FolderOpen : Icons.Material.Outlined.Folder)"
+                            Style="font-size:16px;color:#69663c;" />
+                        </span>
+                        <span class="tree-node-label">Work</span>
+                    </button>
+                </div>
+
+                @if (rootExpanded)
+                {
+                    <div class="tree-node-children">
+                        @RenderTreeNodes(null, 1)
+                    </div>
+                }
+            </div>
+        </section>
+
+
+    </aside>
+
+    @* MAIN CONTENT AREA *@
+    <main class="d-flex flex-column gap-5 p-3">
+
+        @* BREADCRUMBS BAR *@
+        <header>
+
+            @* Getting the Breadcrumbs *@
+
+            @{
+                var breadcrumbs = GetBreadcrumbs();
+            }
+
+            @* Displaying the Breadcrumbs *@
+            <div class="">
+                @foreach (var crumb in breadcrumbs.Select((item, index) => new { Item = item, Index = index }))
+                {
+                    @* GENERATES A BUTTON FOR EACH BREADCRUMB, WITH A SEPARATOR ">" IN BETWEEN (EXCEPT BEFORE THE FIRST ONE)
+                *@
+                    if (crumb.Index > 0)
+                    {
+                        <span class="breadcrumb-separator">&#8250;</span>
+                    }
+                    
+                    @* THE BREADCRUMB ITSELF IS A BUTTON THAT OPENS THE CORRESPONDING FOLDER WHEN CLICKED. THE CURRENT
+                FOLDER (LAST BREADCRUMB) IS HIGHLIGHTED. *@
+                    <button type="button"
+                            class="breadcrumb-link @(crumb.Index == breadcrumbs.Count - 1 ? "breadcrumb-link-active" : "")"
+                            @onclick="() => OpenFolderAsync(crumb.Item.Id)">
+                        @crumb.Item.Name
+                    </button>
+                }
+            </div>
             
-        } *@
-    </div>
+        </header>
 
-    <div class="directory-right">
 
-    </div>
+        <section class="directory-section">
 
+            @* DISPLAY FOLDERS AND NOTES IN THE CURRENT FOLDER, OR A NOTE VIEW IF A NOTE IS SELECTED *@
+            @if (isEditorOpen)
+            {
+                <NoteEditorHost Note="@selectedNote" FolderId="@currentFolderId" ShowBackButton="true"
+                                BreadcrumbRootLabel="Root"
+                                BreadcrumbCurrentLabel="@(selectedNote is null ? "New Note" : selectedNote.Title)"
+                                OnSaved="HandleEditorSavedAsync" OnClose="CloseEditorView" />
+            }
+            else
+            {
+                <button type="button" class="studio-primary" @onclick="OpenCreateNote">
+                    Add Note
+                </button>
+                <h2>Folders</h2>
+                @if (currentFolderContent.Folders.Count == 0)
+                {
+                    <div class="empty-panel">
+                        <MudIcon Icon="@Icons.Material.Outlined.FolderOpen" />
+                        <div>
+                            <strong>No folders yet</strong>
+                            <span>Create a folder from the studio on the left to start building this system.</span>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="folder-card-grid">
+                        @foreach (var folderItem in currentFolderContent.Folders.Select((folder, index) => new
+                        {
+                            Folder = folder,
+                            Index = index
+                        }))
+                        {
+                            <article class="folder-card @GetFolderToneClass(folderItem.Index)">
+                                <div class="folder-card-top">
+                                    <span class="folder-card-icon">
+                                        <MudIcon Icon="@GetFolderCardIcon(folderItem.Folder)" />
+                                    </span>
+
+                                    <div class="folder-card-tools">
+                                        <button type="button" class="card-icon-button"
+                                                @onclick="() => EditFolder(folderItem.Folder)" aria-label="Edit folder">
+                                            <MudIcon Icon="@Icons.Material.Outlined.Edit" />
+                                        </button>
+                                        <button type="button" class="card-icon-button card-icon-button-danger"
+                                                @onclick="() => DeleteFolderAsync(folderItem.Folder)" aria-label="Delete folder">
+                                            <MudIcon Icon="@Icons.Material.Outlined.DeleteOutline" />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <button type="button" class="folder-card-title"
+                                        @onclick="() => OpenFolderAsync(folderItem.Folder.Id)">
+                                    @folderItem.Folder.Name
+                                </button>
+
+                                <div class="folder-card-meta">
+                                    @(folderItem.Folder.IsQuickAccess ? "QUICK ACCESS" : "FOLDER")
+                                </div>
+
+                                @if (!string.IsNullOrWhiteSpace(folderItem.Folder.Description))
+                                {
+                                    <p>@folderItem.Folder.Description</p>
+                                }
+                                else
+                                {
+                                    <p>Open this collection to browse its notes and nested folders.</p>
+                                }
+                            </article>
+                        }
+                    </div>
+                }
+
+                <div class="directory-section notes-section">
+                    <h2>Notes</h2>
+
+                    @* if empty *@
+
+                    @if (currentFolderContent.Notes.Count == 0)
+                    {
+                        <div class="empty-panel empty-panel-notes">
+                            <MudIcon Icon="@Icons.Material.Outlined.StickyNote2" />
+                            <div>
+                                <strong>No notes in this folder yet</strong>
+                                <span>Use the add note shortcut in the header to create a note in your journal.</span>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="note-card-grid">
+                            @foreach (var noteItem in currentFolderContent.Notes.Select((note, index) => new
+                            {
+                                Note = note,
+                                Index = index
+                            }))
+                            {
+                                <article class="note-card @GetNoteToneClass(noteItem.Index) note-card-clickable" role="button"
+                                         tabindex="0" @onclick="() => SelectNoteAsync(noteItem.Note)"
+                                         @onkeydown="@(async e => { if (e.Key == "Enter" || e.Key == " ") await SelectNoteAsync(noteItem.Note); })">
+                                    <div class="note-tab"></div>
+                                    <h3>@noteItem.Note.Title</h3>
+                                    <p>@GetNotePreview(noteItem.Note.Content)</p>
+                                    <div class="note-meta">@GetRelativeTime(noteItem.Note.UpdatedAt)</div>
+                                </article>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+    </main>
 </div>
 
 @code {
-    FolderContent rootFolderContent;
+    private const string RootFolderId = "ROOT";
+    private FolderContent currentFolderContent = new();
+    private List<Folder> allFolders = new();
+    private List<Note> allNotes = new();
+    private string currentFolderId = RootFolderId;
+    private Folder folderModel = CreateEmptyFolder();
+    private bool isEditingFolder;
+    private string? statusMessage;
+
+    // Tree expand state
+    private bool rootExpanded = true;
+    private HashSet<string> expandedFolderIds = new();
+
+    // Note editor state
+    private Note? selectedNote;
+    private bool isEditorOpen;
 
     protected override async Task OnInitializedAsync()
     {
-        rootFolderContent = await FolderService.GetFolder("ROOT");
-
-        var SerialisedData = JsonSerializer.Serialize(rootFolderContent, new JsonSerializerOptions
-        {
-            WriteIndented = true // for better readability in the console
-        });
-
-        Console.WriteLine(SerialisedData);
+        await LoadDirectoryAsync();
     }
+
+    private async Task LoadDirectoryAsync()
+    {
+        currentFolderContent = await FolderService.GetFolder(currentFolderId);
+        await LoadDirectoryTreeSnapshotAsync();
+    }
+
+    private async Task LoadDirectoryTreeSnapshotAsync()
+    {
+        var discoveredFolders = new List<Folder>();
+        var discoveredNotes = new List<Note>();
+        var discoveredFolderIds = new HashSet<string>(StringComparer.Ordinal);
+        var discoveredNoteIds = new HashSet<string>(StringComparer.Ordinal);
+        var foldersToVisit = new Queue<string>();
+        var visitedFolders = new HashSet<string>(StringComparer.Ordinal);
+
+        foldersToVisit.Enqueue(RootFolderId);
+
+        while (foldersToVisit.Count > 0)
+        {
+            var folderId = foldersToVisit.Dequeue();
+
+            if (!visitedFolders.Add(folderId))
+            {
+                continue;
+            }
+
+            var folderContent = await FolderService.GetFolder(folderId);
+
+            foreach (var folder in folderContent.Folders ?? Enumerable.Empty<Folder>())
+            {
+                if (!discoveredFolderIds.Add(folder.Id))
+                {
+                    continue;
+                }
+
+                discoveredFolders.Add(folder);
+                foldersToVisit.Enqueue(folder.Id);
+            }
+
+            foreach (var note in folderContent.Notes ?? Enumerable.Empty<Note>())
+            {
+                if (!discoveredNoteIds.Add(note.Id))
+                {
+                    continue;
+                }
+
+                discoveredNotes.Add(note);
+            }
+        }
+
+        allFolders = discoveredFolders;
+        allNotes = discoveredNotes;
+    }
+
+    private async Task OpenFolderAsync(string folderId)
+    {
+        currentFolderId = folderId;
+        isEditorOpen = false;
+        selectedNote = null;
+        statusMessage = null;
+        ResetFolderForm();
+        // Auto-expand the opened folder in the tree
+        if (folderId != RootFolderId)
+        {
+            expandedFolderIds.Add(folderId);
+            // Also expand all ancestors
+            var current = allFolders.FirstOrDefault(f => f.Id == folderId);
+            while (current is not null && !string.IsNullOrWhiteSpace(current.ParentFolderId))
+            {
+                expandedFolderIds.Add(current.ParentFolderId!);
+                current = allFolders.FirstOrDefault(f => f.Id == current.ParentFolderId);
+            }
+            rootExpanded = true;
+        }
+        await LoadDirectoryAsync();
+    }
+
+    // GO TO ROOT FOLDER (used in breadcrumb and sidebar)
+    private async Task GoToRootAsync()
+    {
+        currentFolderId = RootFolderId;
+        isEditorOpen = false;
+        selectedNote = null;
+        ResetFolderForm();
+        await LoadDirectoryAsync();
+    }
+
+    // GO TO PARENT FOLDER (used in breadcrumb when not at root)
+    private async Task GoToParentAsync()
+    {
+        if (currentFolderId == RootFolderId)
+        {
+            return;
+        }
+
+        currentFolderId = allFolders.FirstOrDefault(folder => folder.Id == currentFolderId)?.ParentFolderId ?? RootFolderId;
+        isEditorOpen = false;
+        selectedNote = null;
+        ResetFolderForm();
+        await LoadDirectoryAsync();
+    }
+
+    // SAVE FOLDER (both create and update)
+    private async Task SaveFolderAsync()
+    {
+        if (string.IsNullOrWhiteSpace(folderModel.Name))
+        {
+            statusMessage = "A folder name is required.";
+            return;
+        }
+
+        folderModel.ParentFolderId = currentFolderId == RootFolderId ? null : currentFolderId;
+        folderModel.EntityType = "FOLDER";
+
+        if (isEditingFolder)
+        {
+            await FolderService.UpdateFolder(folderModel);
+            statusMessage = "Folder updated.";
+        }
+        else
+        {
+            await FolderService.CreateFolder(folderModel);
+            statusMessage = "Folder created.";
+        }
+
+        ResetFolderForm();
+        await LoadDirectoryAsync();
+    }
+
+    // EDIT FOLDER
+    private void EditFolder(Folder folder)
+    {
+        isEditingFolder = true;
+        folderModel = new Folder
+        {
+            Id = folder.Id,
+            UserId = folder.UserId,
+            ParentFolderId = folder.ParentFolderId,
+            Path = folder.Path,
+            Name = folder.Name,
+            Description = folder.Description,
+            IsQuickAccess = folder.IsQuickAccess,
+            EntityType = folder.EntityType,
+            CreatedAt = folder.CreatedAt,
+            UpdatedAt = folder.UpdatedAt
+        };
+        statusMessage = null;
+    }
+
+    // DELETE FOLDER
+    private async Task DeleteFolderAsync(Folder folder)
+    {
+        await FolderService.DeleteFolder(folder);
+        statusMessage = $"Deleted '{folder.Name}'.";
+
+        if (folderModel.Id == folder.Id)
+        {
+            ResetFolderForm();
+        }
+
+        expandedFolderIds.Remove(folder.Id);
+        await LoadDirectoryAsync();
+    }
+
+    private void ResetFolderForm()
+    {
+        folderModel = CreateEmptyFolder();
+        isEditingFolder = false;
+    }
+
+    // Tree helpers
+    private void ToggleRootExpand() => rootExpanded = !rootExpanded;
+
+    private void ToggleFolderExpand(string folderId)
+    {
+        if (!expandedFolderIds.Add(folderId))
+            expandedFolderIds.Remove(folderId);
+    }
+
+    private bool IsFolderExpanded(string folderId) => expandedFolderIds.Contains(folderId);
+
+    private IEnumerable<Folder> GetChildFolders(string? parentId) =>
+        string.IsNullOrWhiteSpace(parentId)
+            ? allFolders.Where(f => string.IsNullOrWhiteSpace(f.ParentFolderId))
+            : allFolders.Where(f => f.ParentFolderId == parentId);
+
+    private IEnumerable<Note> GetFolderNotes(string? folderId) =>
+        string.IsNullOrWhiteSpace(folderId) || folderId == RootFolderId
+            ? allNotes.Where(n => string.IsNullOrWhiteSpace(n.FolderId))
+            : allNotes.Where(n => n.FolderId == folderId);
+
+    private bool HasChildren(string folderId) =>
+        allFolders.Any(f => f.ParentFolderId == folderId) ||
+        allNotes.Any(n => n.FolderId == folderId);
+
+    private bool HasRootChildren() =>
+        allFolders.Any(f => string.IsNullOrWhiteSpace(f.ParentFolderId)) ||
+        allNotes.Any(n => string.IsNullOrWhiteSpace(n.FolderId));
+
+    // Note editor helpers
+    private async Task SelectNoteAsync(Note note)
+    {
+        selectedNote = await LoadFullNoteAsync(note);
+        isEditorOpen = true;
+    }
+
+    private void OpenCreateNote()
+    {
+        selectedNote = null;
+        isEditorOpen = true;
+    }
+
+    private Task CloseEditorView()
+    {
+        isEditorOpen = false;
+        selectedNote = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleEditorSavedAsync(Note _)
+    {
+        isEditorOpen = false;
+        selectedNote = null;
+        await LoadDirectoryAsync();
+    }
+
+    private async Task<Note> LoadFullNoteAsync(Note note)
+    {
+        if (int.TryParse(note.Id, out var noteId))
+        {
+            var loadedNote = await NoteService.GetNoteAsync(noteId);
+            if (!string.IsNullOrWhiteSpace(loadedNote.Id))
+            {
+                return loadedNote;
+            }
+        }
+
+        return new Note
+        {
+            Id = note.Id,
+            UserId = note.UserId,
+            FolderId = note.FolderId,
+            EntityType = note.EntityType,
+            Title = note.Title,
+            Content = note.Content,
+            CreatedAt = note.CreatedAt,
+            UpdatedAt = note.UpdatedAt
+        };
+    }
+
+    // Recursive rendering of directory tree
+    private RenderFragment RenderTreeNodes(string? parentId, int depth) => builder =>
+    {
+        var childFolders = GetChildFolders(parentId).ToList();
+        var childNotes = GetFolderNotes(parentId).ToList();
+
+        foreach (var folder in childFolders)
+        {
+            var folderId = folder.Id;
+            var isActive = currentFolderId == folderId;
+            var isExpanded = IsFolderExpanded(folderId);
+            var hasFolderChildren = HasChildren(folderId);
+            var indentPx = depth * 14;
+
+            builder.OpenElement(0, "div");
+            builder.AddAttribute(1, "class", "tree-node-group");
+
+            // Row
+            builder.OpenElement(2, "div");
+            builder.AddAttribute(3, "class", "tree-node-row");
+            builder.AddAttribute(4, "style", $"padding-left:{indentPx}px;");
+
+            // Chevron button
+            builder.OpenElement(5, "button");
+            builder.AddAttribute(6, "type", "button");
+            builder.AddAttribute(7, "class", "tree-node-chevron-btn");
+            builder.AddAttribute(8, "aria-label", "Toggle folder");
+            if (hasFolderChildren)
+            {
+                builder.AddAttribute(9, "onclick", EventCallback.Factory.Create(this, () => ToggleFolderExpand(folderId)));
+            }
+            else
+            {
+                builder.AddAttribute(9, "style", "visibility:hidden;");
+            }
+            builder.OpenComponent<MudIcon>(10);
+            builder.AddAttribute(11, "Icon", isExpanded ? Icons.Material.Outlined.ExpandMore :
+Icons.Material.Outlined.ChevronRight);
+            builder.AddAttribute(12, "Style", "font-size:16px;color:#69663c;");
+            builder.CloseComponent();
+            builder.CloseElement(); // chevron button
+
+            // Folder label button
+            builder.OpenElement(13, "button");
+            builder.AddAttribute(14, "type", "button");
+            builder.AddAttribute(15, "class", $"tree-node{(isActive ? " tree-node-active" : "")}");
+            builder.AddAttribute(16, "onclick", EventCallback.Factory.Create(this, () => OpenFolderAsync(folderId)));
+
+            // Icon
+            builder.OpenElement(17, "span");
+            builder.AddAttribute(18, "class", "tree-node-icon");
+            builder.OpenComponent<MudIcon>(19);
+            builder.AddAttribute(20, "Icon", isExpanded ? Icons.Material.Outlined.FolderOpen : Icons.Material.Outlined.Folder);
+            builder.AddAttribute(21, "Style", "font-size:16px;color:#69663c;");
+            builder.CloseComponent();
+            builder.CloseElement(); // icon span
+
+            // Label
+            builder.OpenElement(22, "span");
+            builder.AddAttribute(23, "class", "tree-node-label");
+            builder.AddContent(24, folder.Name);
+            builder.CloseElement();
+
+            builder.CloseElement(); // folder label button
+            builder.CloseElement(); // tree-node-row
+
+            // Children
+            if (isExpanded)
+            {
+                builder.OpenElement(25, "div");
+                builder.AddAttribute(26, "class", "tree-node-children");
+                builder.AddContent(27, RenderTreeNodes(folderId, depth + 1));
+                builder.CloseElement();
+            }
+
+            builder.CloseElement(); // tree-node-group
+        }
+
+        // Notes at this level
+        foreach (var note in childNotes)
+        {
+            var noteId = note.Id;
+            var noteTitle = note.Title;
+            var indentPx = depth * 14;
+
+            builder.OpenElement(30, "div");
+            builder.AddAttribute(31, "class", "tree-node-row tree-note-row");
+            builder.AddAttribute(32, "style", $"padding-left:{indentPx + 20}px;");
+
+            builder.OpenElement(33, "button");
+            builder.AddAttribute(34, "type", "button");
+            builder.AddAttribute(35, "class", $"tree-node tree-note-node{(isEditorOpen && selectedNote?.Id == noteId ? " tree-node-active" : "")}");
+            builder.AddAttribute(36, "onclick", EventCallback.Factory.Create(this, () => SelectNoteAsync(note)));
+
+            builder.OpenElement(37, "span");
+            builder.AddAttribute(38, "class", "tree-node-icon");
+            builder.OpenComponent<MudIcon>(39);
+            builder.AddAttribute(40, "Icon", Icons.Material.Outlined.Description);
+            builder.AddAttribute(41, "Style", "font-size:16px;color:#69663c;");
+            builder.CloseComponent();
+            builder.CloseElement();
+
+            builder.OpenElement(42, "span");
+            builder.AddAttribute(43, "class", "tree-node-label");
+            builder.AddContent(44, string.IsNullOrWhiteSpace(noteTitle) ? "Untitled" : noteTitle);
+            builder.CloseElement();
+
+            builder.CloseElement(); // tree-note-node button
+            builder.CloseElement(); // tree-note-row
+        }
+    };
+
+    // TO FETCH BREADCRUMB CHAIN FOR CURRENT FOLDERS
+    private sealed record BreadcrumbItem(string Id, string Name);
+    private List<BreadcrumbItem> GetBreadcrumbs()
+    {
+        var breadcrumbs = new List<BreadcrumbItem>
+
+        {
+            new BreadcrumbItem(RootFolderId, "Root")
+        };
+
+        if (currentFolderId == RootFolderId)
+        {
+            return breadcrumbs;
+        }
+
+        var chain = new Stack<BreadcrumbItem>();
+        var current = allFolders.FirstOrDefault(folder => folder.Id == currentFolderId);
+
+        while (current is not null)
+        {
+            chain.Push(new BreadcrumbItem(current.Id, current.Name));
+
+            current = string.IsNullOrWhiteSpace(current.ParentFolderId)
+                ? null
+                : allFolders.FirstOrDefault(folder => folder.Id == current.ParentFolderId);
+        }
+
+        breadcrumbs.AddRange(chain);
+        return breadcrumbs;
+    }
+
+    private static string GetFolderToneClass(int index)
+    {
+        @* return index % 4 switch
+        {
+            0 => "folder-card-gold",
+            1 => "folder-card-sage",
+            2 => "folder-card-stone",
+            _ => "folder-card-rose"
+        }; *@
+
+        return "folder-card-gold";
+    }
+
+    private static string GetFolderCardIcon(Folder folder)
+    {
+        return folder.IsQuickAccess
+            ? Icons.Material.Outlined.StarOutline
+            : Icons.Material.Outlined.Folder;
+    }
+
+    private static string GetNoteToneClass(int index)
+    {
+        @* return index % 3 switch
+        {
+            0 => "note-card-gold",
+            1 => "note-card-rose",
+            _ => "note-card-ivory"
+        }; *@
+
+        return "note-card-gold";
+    }
+
+    // functions to generate note preview text and relative time display
+    private static string GetNotePreview(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return "Open note";
+        }
+
+        var plainText = System.Text.RegularExpressions.Regex.Replace(content, "<.*?>", string.Empty).Trim();
+
+        if (string.IsNullOrWhiteSpace(plainText))
+        {
+            return "Open note";
+        }
+
+        const int maxLength = 140;
+        return plainText.Length <= maxLength ? plainText : $"{plainText[..maxLength].Trim()}...";
+    }
+
+    private static string GetRelativeTime(DateTime value)
+    {
+        var delta = DateTime.UtcNow - value.ToUniversalTime();
+
+        if (delta.TotalMinutes < 1)
+        {
+            return "JUST NOW";
+        }
+
+        if (delta.TotalHours < 1)
+        {
+            return $"{Math.Max(1, (int)delta.TotalMinutes)} MINUTES AGO";
+        }
+
+        if (delta.TotalDays < 1)
+        {
+            return $"{Math.Max(1, (int)delta.TotalHours)} HOURS AGO";
+        }
+
+        if (delta.TotalDays < 2)
+        {
+            return "YESTERDAY";
+        }
+
+        if (delta.TotalDays < 7)
+        {
+            return $"{Math.Max(1, (int)delta.TotalDays)} DAYS AGO";
+        }
+
+        return value.ToLocalTime().ToString("dd MMM yyyy").ToUpperInvariant();
+    }
+
+    private static Folder CreateEmptyFolder()
+    {
+        return new Folder
+        {
+            Name = string.Empty,
+            Description = string.Empty,
+            EntityType = "FOLDER"
+        };
+    }
+
 }

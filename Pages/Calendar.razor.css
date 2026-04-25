@@ -1,48 +1,451 @@
-﻿.calendar-grid {
+.calendar-page {
+    --calendar-bg: #fbf7ea;
+    --calendar-panel: #fdfaf1;
+    --calendar-side: #f5f4e5;
+    --calendar-border: rgba(112, 101, 61, 0.12);
+    --calendar-border-strong: rgba(112, 101, 61, 0.2);
+    --calendar-text: #3f402f;
+    --calendar-muted: #aca58c;
+    --calendar-task: #504bef;
+    --calendar-task-bg: rgba(80, 75, 239, 0.2);
+    --calendar-reminder: #f67adf;
+    --calendar-reminder-bg: rgba(246, 122, 223, 0.2);
+    --calendar-note: #69663c;
+    --calendar-note-bg: rgba(105, 102, 60, 0.2);
+    --calendar-project-bg: #f2e8bf;
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 10px;
+    grid-template-columns: minmax(0, 2.6fr) minmax(320px, 0.95fr);
+    gap: 1.75rem;
+    align-items: start;
+    color: var(--calendar-text);
 }
 
-.calendar-day {
-    width: 75px;
-    height: 75px;
-    background-color: var(--light-lavendar);
-    border: 1px solid #979797;
-    padding: 5px;
+.calendar-panel {
+    background:
+        radial-gradient(circle at top left, rgba(255, 255, 255, 0.78), transparent 26%),
+        var(--calendar-panel);
+    border: 1px solid rgba(112, 101, 61, 0.08);
+    border-radius: 34px;
+    padding: 2rem;
+    box-shadow: 0 24px 64px rgba(95, 87, 55, 0.08);
+}
+
+.feed-panel {
+    background: var(--calendar-side);
+    border-radius: 0;
+    min-height: calc(100vh - 4rem);
+    padding: 2.25rem 2rem;
+    border-left: 1px solid rgba(112, 101, 61, 0.08);
+}
+
+.calendar-panel-header,
+.feed-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.calendar-panel-header {
+    margin-bottom: 1.75rem;
+}
+
+.calendar-heading-block {
+    display: grid;
+    gap: 0.55rem;
+}
+
+.eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.24em;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--calendar-muted);
+}
+
+.calendar-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.calendar-heading h1,
+.feed-header h2,
+.date-number {
+    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
+}
+
+.calendar-heading h1 {
+    margin: 0;
+    font-size: clamp(2.8rem, 5vw, 4.6rem);
+    font-weight: 700;
+    line-height: 0.95;
+    color: #303124;
+}
+
+.calendar-heading span {
+    color: #bdb49e;
+    font-size: clamp(1.55rem, 2vw, 2.35rem);
+    font-style: italic;
+    font-weight: 500;
+}
+
+.calendar-controls {
+    display: flex;
+    gap: 0.6rem;
+    padding-top: 0.25rem;
+}
+
+.calendar-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    border-radius: 999px;
+    padding: 0.6rem 1rem;
+    border: 1px solid transparent;
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.chip-dot {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 999px;
+    background: currentColor;
+}
+
+.chip-task {
+    color: var(--calendar-task);
+    background: var(--calendar-task-bg);
+    border-color: rgba(80, 75, 239, 0.2);
+}
+
+.chip-reminder {
+    color: var(--calendar-reminder);
+    background: var(--calendar-reminder-bg);
+    border-color: rgba(246, 122, 223, 0.2);
+}
+
+.chip-note {
+    color: var(--calendar-note);
+    background: var(--calendar-note-bg);
+    border-color: rgba(105, 102, 60, 0.2);
+}
+
+.chip-project {
+    color: #8c7f39;
+    background: #f7efc7;
+    border-color: rgba(140, 127, 57, 0.2);
+}
+
+.calendar-board {
+    border: 1px solid rgba(112, 101, 61, 0.08);
+    border-radius: 22px;
+    overflow: hidden;
+    background: rgba(255, 253, 247, 0.72);
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.weekday {
+    min-height: 3.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--calendar-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    border-bottom: 1px solid rgba(112, 101, 61, 0.08);
+    background: rgba(255, 251, 242, 0.72);
+}
+
+.date-cell {
+    min-height: 180px;
+    padding: 0.95rem 0.75rem 0.9rem;
+    background: rgba(255, 255, 255, 0.46);
+    border-right: 1px solid rgba(112, 101, 61, 0.07);
+    border-bottom: 1px solid rgba(112, 101, 61, 0.07);
     display: flex;
     flex-direction: column;
-    justify-content: space-between
+    gap: 0.9rem;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
 }
 
-.calendar-day-header {
-    background-color: var(--secondary-lavendar);
-    text-align: center;
-    color: var(--light-lavendar)
+.date-cell:hover {
+    background: rgba(255, 255, 255, 0.72);
 }
 
-.other-month{
-    opacity: 0.5;
+.date-cell-muted {
+    background: rgba(250, 245, 227, 0.55);
 }
 
-.month-notes {
-    background-color: var(--light-blue);
-    border-radius: 5px;
-    border: 1px solid #979797;
-    min-height: 80vh;
+.date-cell-today {
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: inset 0 0 0 1px rgba(112, 101, 61, 0.18);
 }
 
-.month-items {
-    background-color: var(--light-lavendar);
-    border-radius: 5px;
-    border: 1px solid #979797;
-    min-height: 80vh;
+.date-cell-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
 }
 
-.reminder-icon{
-    background-color: var(--primary-red);
+.date-number {
+    font-size: 18px;
+    font-weight: 400;
+    color: #646557;
+    line-height: 28px;
 }
 
-.task-icon {
-    background-color: var(--primary-green);
+.date-cell-muted .date-number {
+    color: #c7c0ab;
+}
+
+.today-pill {
+    border-radius: 999px;
+    padding: 0.22rem 0.55rem;
+    background: rgba(112, 101, 61, 0.1);
+    color: #6f6847;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.date-event-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.event-pill {
+    display: block;
+    width: 100%;
+    border: none;
+    border-left: 3px solid currentColor;
+    border-radius: 8px;
+    padding: 0.5rem 0.6rem 0.48rem 0.68rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    box-shadow: none;
+}
+
+button.event-pill {
+    cursor: pointer;
+}
+
+.event-pill-task {
+    color: var(--calendar-task);
+    background: var(--calendar-task-bg);
+}
+
+.event-pill-reminder {
+    color: var(--calendar-reminder);
+    background: var(--calendar-reminder-bg);
+}
+
+.event-pill-note {
+    color: var(--calendar-note);
+    background: var(--calendar-note-bg);
+}
+
+.event-pill-more {
+    color: #8f8867;
+    background: transparent;
+    border-left-color: rgba(143, 136, 103, 0.35);
+    font-weight: 600;
+}
+
+.feed-header {
+    margin-bottom: 1.6rem;
+}
+
+.feed-header h2 {
+    margin: 0.15rem 0 0;
+    font-size: clamp(2rem, 2.8vw, 2.8rem);
+    font-weight: 700;
+    color: #313225;
+}
+
+
+
+.feed-list {
+    display: grid;
+    gap: 1.8rem;
+}
+
+.feed-day {
+    display: grid;
+    gap: 1rem;
+}
+
+.feed-day-header {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 0.9rem;
+    align-items: center;
+}
+
+.feed-date {
+    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
+    font-size: 20px;
+    font-weight: 500;
+    color: #646557;
+}
+
+.feed-rule {
+    height: 1px;
+    background: rgba(112, 101, 61, 0.14);
+}
+
+.feed-weekday {
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #b2aa8f;
+    letter-spacing: 0.16em;
+}
+
+.feed-items {
+    display: grid;
+    gap: 0.95rem;
+}
+
+.feed-item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.9rem;
+    align-items: start;
+    background: rgba(255, 255, 255, 0.85);
+    border-radius: 24px;
+    padding: 1.15rem 1.15rem 1.1rem;
+    border: 1px solid rgba(112, 101, 61, 0.06);
+    box-shadow: 0 16px 30px rgba(95, 87, 55, 0.05);
+}
+
+.feed-item-icon {
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 999px;
+    margin-top: 0.5rem;
+    background: currentColor;
+}
+
+.feed-item-copy {
+    display: grid;
+    gap: 0.35rem;
+}
+
+.feed-item-copy h3,
+.feed-item-button {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: inherit;
+}
+
+.feed-item-button {
+    border: none;
+    background: transparent;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
+}
+
+.feed-item-copy p {
+    margin: 0;
+    color: #76715c;
+    font-size: 0.98rem;
+    line-height: 1.45;
+}
+
+.feed-item.event-pill-task {
+    color: var(--calendar-task);
+}
+
+.feed-item.event-pill-reminder {
+    color: var(--calendar-reminder);
+}
+
+.feed-item.event-pill-note {
+    color: var(--calendar-note);
+    background: rgba(105, 102, 60, 0.14);
+    border: 1px dashed rgba(105, 102, 60, 0.28);
+    box-shadow: none;
+}
+
+@media (max-width: 1280px) {
+    .calendar-page {
+        grid-template-columns: 1fr;
+    }
+
+    .feed-panel {
+        min-height: 0;
+        border-radius: 28px;
+        border-left: none;
+    }
+}
+
+@media (max-width: 860px) {
+    .calendar-panel,
+    .feed-panel {
+        padding: 1.35rem;
+    }
+
+    .calendar-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .weekday {
+        display: none;
+    }
+
+    .date-cell {
+        min-height: 150px;
+    }
+}
+
+@media (max-width: 560px) {
+    .calendar-page {
+        gap: 1rem;
+    }
+
+    .calendar-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .calendar-panel-header {
+        flex-direction: column;
+    }
+
+    .feed-day-header {
+        grid-template-columns: auto 1fr;
+    }
+
+    .feed-weekday {
+        grid-column: 1 / -1;
+    }
 }

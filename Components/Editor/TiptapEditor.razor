@@ -1,0 +1,99 @@
+@using System.Text.Json
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<div class="editor-wrapper note-editor-paper">
+    <div @ref="editorDiv" class="editor-host"></div>
+</div>
+
+@code {
+    private ElementReference editorDiv;
+    private DotNetObjectReference<TiptapEditor>? objRef;
+    private bool isEditorCreated;
+
+    [Parameter] public string EditorId { get; set; } = Guid.NewGuid().ToString();
+    [Parameter] public string InitialContent { get; set; } = string.Empty;
+    [Parameter] public EventCallback<EditorContentChangedArgs> OnChange { get; set; }
+    [Parameter] public EventCallback<EditorStateChangedArgs> OnStateChange { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        objRef = DotNetObjectReference.Create(this);
+
+        await JS.InvokeVoidAsync("createEditor",
+            EditorId,
+            editorDiv,
+            objRef,
+            new
+            {
+                content = InitialContent,
+                autofocus = false
+            });
+
+        await JS.InvokeVoidAsync("registerStateListener", EditorId, objRef);
+        isEditorCreated = true;
+    }
+
+    [JSInvokable]
+    public async Task OnContentChanged(EditorContentChangedArgs content)
+    {
+        await OnChange.InvokeAsync(content);
+    }
+
+    [JSInvokable]
+    public async Task OnEditorStateChanged(EditorStateChangedArgs state)
+    {
+        await OnStateChange.InvokeAsync(state);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (isEditorCreated)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("destroyEditor", EditorId);
+            }
+            catch (Microsoft.JSInterop.JSException)
+            {
+            }
+        }
+
+        objRef?.Dispose();
+    }
+
+    public sealed class EditorContentChangedArgs
+    {
+        public string Html { get; set; } = string.Empty;
+        public JsonElement Json { get; set; }
+        public string Text { get; set; } = string.Empty;
+    }
+
+    public sealed class EditorStateChangedArgs
+    {
+        public bool IsBold { get; set; }
+        public bool IsItalic { get; set; }
+        public bool IsStrike { get; set; }
+        public bool IsUnderline { get; set; }
+        public bool IsHighlight { get; set; }
+        public bool IsLink { get; set; }
+        public bool IsParagraph { get; set; }
+        public bool IsHeading1 { get; set; }
+        public bool IsHeading2 { get; set; }
+        public bool IsHeading3 { get; set; }
+        public bool IsBulletList { get; set; }
+        public bool IsOrderedList { get; set; }
+        public bool IsCodeBlock { get; set; }
+        public bool IsAlignLeft { get; set; }
+        public bool IsAlignCenter { get; set; }
+        public bool IsAlignRight { get; set; }
+        public bool IsAlignJustify { get; set; }
+        public bool CanUndo { get; set; }
+        public bool CanRedo { get; set; }
+    }
+}

@@ -17,7 +17,8 @@ builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddAuthorizationCore();
 
 // determines logged in user
-builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
+builder.Services.AddScoped<CustomAuthStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<CustomAuthStateProvider>());
 
 // makes auth state available to all components, so that we can use <AuthorizeView> and [Authorize] in any component
 builder.Services.AddCascadingAuthenticationState();
@@ -28,6 +29,9 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<AuthMessageHandler>();
 
 builder.Services.AddScoped<TokenStore>();
+builder.Services.AddScoped<SessionStore>();
+builder.Services.AddScoped<AppSessionService>();
+builder.Services.AddScoped<LocalAppStateStore>();
 
 
 
@@ -60,7 +64,7 @@ builder.Services.AddHttpClient("UsersApi", client =>
 
 builder.Services.AddHttpClient("AppApi", client =>
 {
-    client.BaseAddress = new Uri("https://27h4fr76cj.execute-api.us-east-1.amazonaws.com/Prod/");
+    client.BaseAddress = new Uri("https://27h4fr76cj.execute-api.us-east-1.amazonaws.com/");
 })
 .AddHttpMessageHandler<AuthMessageHandler>();
 

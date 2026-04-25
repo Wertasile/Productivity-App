@@ -1,0 +1,247 @@
+@using MudBlazor
+@inject ItemService ItemService
+
+<MudDialog>
+    <TitleContent>
+        Add Item for @SelectedDate.ToString("dd MMM yyyy")
+    </TitleContent>
+
+    <DialogContent>
+        <div class="d-flex gap-2 mb-4">
+            <MudButton Variant="@(selectedForm == CalendarEntryType.Task ? Variant.Filled : Variant.Outlined)"
+                       Color="Color.Primary"
+                       OnClick="@(() => selectedForm = CalendarEntryType.Task)">
+                Task
+            </MudButton>
+            <MudButton Variant="@(selectedForm == CalendarEntryType.Reminder ? Variant.Filled : Variant.Outlined)"
+                       Color="Color.Secondary"
+                       OnClick="@(() => selectedForm = CalendarEntryType.Reminder)">
+                Reminder
+            </MudButton>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4">
+                @errorMessage
+            </MudAlert>
+        }
+
+        @if (selectedForm == CalendarEntryType.Task)
+        {
+            <div class="d-flex flex-column gap-3">
+                <MudTextField @bind-Value="taskModel.Title"
+                              Label="Title"
+                              Variant="Variant.Outlined"
+                              Required="true" />
+
+                <MudTextField @bind-Value="taskModel.Description"
+                              Label="Description"
+                              Variant="Variant.Outlined"
+                              Lines="4" />
+
+                <MudDatePicker Label="Due date"
+                               Date="taskDate"
+                               DateChanged="OnTaskDateChanged"
+                               Variant="Variant.Outlined" />
+
+                <MudTimePicker Label="Due time"
+                               Time="taskTime"
+                               TimeChanged="OnTaskTimeChanged"
+                               AmPm="true"
+                               Variant="Variant.Outlined" />
+            </div>
+        }
+        else
+        {
+            <div class="d-flex flex-column gap-3">
+                <MudTextField @bind-Value="reminderModel.Name"
+                              Label="Name"
+                              Variant="Variant.Outlined"
+                              Required="true" />
+
+                <MudTextField @bind-Value="reminderModel.Description"
+                              Label="Description"
+                              Variant="Variant.Outlined"
+                              Lines="4" />
+
+                <MudDatePicker Label="Reminder date"
+                               Date="reminderDate"
+                               DateChanged="OnReminderDateChanged"
+                               Variant="Variant.Outlined" />
+
+                <MudTimePicker Label="Reminder time"
+                               Time="reminderTime"
+                               TimeChanged="OnReminderTimeChanged"
+                               AmPm="true"
+                               Variant="Variant.Outlined" />
+            </div>
+        }
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="isSubmitting">Cancel</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="SubmitAsync"
+                   Disabled="isSubmitting">
+            @(isSubmitting ? "Saving..." : "Save")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private enum CalendarEntryType
+    {
+        Task,
+        Reminder
+    }
+
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public DateTime SelectedDate { get; set; }
+
+    [Parameter]
+    public string? InitialType { get; set; }
+
+    private readonly TaskItem taskModel = new()
+    {
+        Title = string.Empty,
+        Description = string.Empty
+    };
+
+    private readonly Reminder reminderModel = new()
+    {
+        Name = string.Empty,
+        Description = string.Empty
+    };
+
+    private CalendarEntryType selectedForm = CalendarEntryType.Task;
+    private DateTime? taskDate;
+    private TimeSpan? taskTime;
+    private DateTime? reminderDate;
+    private TimeSpan? reminderTime;
+    private bool isSubmitting;
+    private string? errorMessage;
+
+    protected override void OnInitialized()
+    {
+        selectedForm = string.Equals(InitialType, "reminder", StringComparison.OrdinalIgnoreCase)
+            ? CalendarEntryType.Reminder
+            : CalendarEntryType.Task;
+
+        var baseDate = SelectedDate == default ? DateTime.Today : SelectedDate.Date;
+
+        taskDate = baseDate;
+        reminderDate = baseDate;
+        taskTime = new TimeSpan(9, 0, 0);
+        reminderTime = new TimeSpan(9, 0, 0);
+        taskModel.DueDate = CombineDateAndTime(taskDate, taskTime);
+        reminderModel.ReminderDate = CombineDateAndTime(reminderDate, reminderTime);
+    }
+
+    private void OnTaskDateChanged(DateTime? value)
+    {
+        taskDate = value;
+        taskModel.DueDate = CombineDateAndTime(taskDate, taskTime);
+    }
+
+    private void OnTaskTimeChanged(TimeSpan? value)
+    {
+        taskTime = value;
+        taskModel.DueDate = CombineDateAndTime(taskDate, taskTime);
+    }
+
+    private void OnReminderDateChanged(DateTime? value)
+    {
+        reminderDate = value;
+        reminderModel.ReminderDate = CombineDateAndTime(reminderDate, reminderTime);
+    }
+
+    private void OnReminderTimeChanged(TimeSpan? value)
+    {
+        reminderTime = value;
+        reminderModel.ReminderDate = CombineDateAndTime(reminderDate, reminderTime);
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (isSubmitting)
+        {
+            return;
+        }
+
+        errorMessage = null;
+
+        try
+        {
+            isSubmitting = true;
+
+            BaseItem? createdItem = selectedForm switch
+            {
+                CalendarEntryType.Task => await CreateTaskAsync(),
+                CalendarEntryType.Reminder => await CreateReminderAsync(),
+                _ => null
+            };
+
+            if (createdItem is null)
+            {
+                errorMessage = "The item could not be created. Please try again.";
+                return;
+            }
+
+            MudDialog.Close(DialogResult.Ok(createdItem));
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task<BaseItem?> CreateTaskAsync()
+    {
+        if (string.IsNullOrWhiteSpace(taskModel.Title))
+        {
+            errorMessage = "Task title is required.";
+            return null;
+        }
+
+        taskModel.DueDate = CombineDateAndTime(taskDate, taskTime);
+        taskModel.EntityType = "TASK";
+        taskModel.CreatedAt = DateTime.UtcNow;
+        taskModel.UpdatedAt = DateTime.UtcNow;
+
+        return await ItemService.CreateItemAsync(taskModel);
+    }
+
+    private async Task<BaseItem?> CreateReminderAsync()
+    {
+        if (string.IsNullOrWhiteSpace(reminderModel.Name))
+        {
+            errorMessage = "Reminder name is required.";
+            return null;
+        }
+
+        reminderModel.ReminderDate = CombineDateAndTime(reminderDate, reminderTime);
+        reminderModel.EntityType = "REMINDER";
+        reminderModel.CreatedAt = DateTime.UtcNow;
+        reminderModel.UpdatedAt = DateTime.UtcNow;
+
+        return await ItemService.CreateItemAsync(reminderModel);
+    }
+
+    private static DateTime CombineDateAndTime(DateTime? date, TimeSpan? time)
+    {
+        var actualDate = (date ?? DateTime.Today).Date;
+        var actualTime = time ?? TimeSpan.Zero;
+        return actualDate.Add(actualTime);
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

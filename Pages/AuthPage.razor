@@ -1,10 +1,9 @@
-﻿@page "/"
+@page "/"
+@page "/login"
 @using ActualBlazorStandAloneAppSPA.Components
-@inject Blazored.LocalStorage.ILocalStorageService localStorage
-@inject IServiceProvider ServiceProvider
-
+@inject TokenStore TokenStore
+@inject AppSessionService AppSessionService
 @inject NavigationManager Navigation
-
 
 @if (authState == AuthState.Login)
 {
@@ -20,8 +19,8 @@ else if (authState == AuthState.ConfirmEmail)
 }
 
 @code {
-
-    Dictionary<String, String> authTokens;
+    [SupplyParameterFromQuery(Name = "mode")]
+    private string? Mode { get; set; }
 
     // AuthState is an enum that represents the current state of the authentication process (Login, Register, ConfirmEmail)
     // It has been declared in Enums Folder and is in Imports.razor for easy access across the application
@@ -34,13 +33,13 @@ else if (authState == AuthState.ConfirmEmail)
 
     protected override async Task OnInitializedAsync()
     {
-           
-        var tokens = await localStorage.GetItemAsync<string>("auth_tokens");
-        if (tokens != null)
+        var guestSession = await AppSessionService.GetGuestSessionAsync();
+        var tokens = await TokenStore.GetTokensAsync();
+        var forceSignIn = string.Equals(Mode, "signin", StringComparison.OrdinalIgnoreCase);
+
+        if (!forceSignIn && (guestSession is not null || tokens is not null))
         {
             Navigation.NavigateTo("/dashboard");
         }
-
     }
-
 }

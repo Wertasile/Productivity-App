@@ -1,52 +1,227 @@
-﻿@using MudBlazor
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@using MudBlazor
+@inject AuthService AuthService
+@inject IDialogService DialogService
+@inject NavigationManager Navigation
 
-<MudDrawer @bind-Open="_open" Fixed="true" Elevation="1" Variant="DrawerVariant.Mini" OpenMiniOnHover="true"
-           Breakpoint="Breakpoint.None">
-    <MudNavMenu>
-        <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Store">Dashboard</MudNavLink>
-        <MudNavLink Href="/calendar" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.CalendarToday">Calendar</MudNavLink>
-        <MudNavLink Href="/taskboard" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.CalendarViewWeek">TaskBoard</MudNavLink>
-        <MudNavLink Href="/directory" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.FolderCopy">Directory</MudNavLink>
-    </MudNavMenu>
+<MudDrawer @bind-Open="_open"
+           Fixed="true"
+           Elevation="0"
+           Variant="DrawerVariant.Persistent"
+           Breakpoint="Breakpoint.None"
+           OpenMiniOnHover="false"
+           Class="app-sidebar"
+>
+    <div class="sidebar-top">
+        <div class="sidebar-header">
+                <div class="">ProdPadre</div>
+        </div>
+
+        <div class="sidebar-actions" aria-label="Quick create">
+            <div>
+                <button type="button"
+                        class="sidebar-action-circle sidebar-action-circle-task"
+                        aria-label="Create task"
+                        title="Create task"
+                        @onclick='() => OpenCreateDialogAsync("task")'>
+                    // ICONS PACK
+                    t
+                </button>
+
+                <button type="button"
+                        class="sidebar-action-circle sidebar-action-circle-reminder"
+                        aria-label="Create reminder"
+                        title="Create reminder"
+                        @onclick='() => OpenCreateDialogAsync("reminder")'>
+                    // ICONS PACK
+                    r
+                </button>
+                <div class="sidebar-cta-wrap">
+                    <button type="button" class="sidebar-cta-btn" @onclick="OpenNewNote">
+                        <span class="sidebar-cta-icon">+</span>
+                        <span>New Note</span>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+
+
+        <nav class="sidebar-nav" aria-label="Primary">
+            <NavLink href="/dashboard" class="sidebar-nav-link" Match="NavLinkMatch.All">
+                <span class="sidebar-nav-icon">
+                    // ICONS PACK
+                </span>
+                <span>Home</span>
+            </NavLink>
+
+            <NavLink href="/journal" class="sidebar-nav-link">
+                <span class="sidebar-nav-icon">
+                    // ICONS PACK
+                </span>
+                <span>Journal</span>
+            </NavLink>
+
+            <NavLink href="/calendar" class="sidebar-nav-link">
+                <span class="sidebar-nav-icon">
+                    // ICONS PACK
+                </span>
+                <span>Calendar</span>
+            </NavLink>
+
+            <NavLink href="/directory" class="sidebar-nav-link">
+                <span class="sidebar-nav-icon">
+                    // ICONS PACK
+                </span>
+                <span>Library</span>
+            </NavLink>
+
+            <NavLink href="/archive" class="sidebar-nav-link">
+                <span class="sidebar-nav-icon">
+                    // ICONS PACK 
+                </span>
+                <span>Archive</span>
+            </NavLink>
+
+            <NavLink href="/settings" class="sidebar-nav-link">
+                <span class="sidebar-nav-icon">
+                    // ICONS PACK
+                </span>
+                <span>Settings</span>
+            </NavLink>
+        </nav>
+
+        <div class="sidebar-footer">
+            <button type="button" class="sidebar-session-btn" @onclick="HandleSessionActionAsync">
+                <span class="sidebar-session-icon">
+                    @if (showSignIn)
+                    {
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M14 5h4.5A1.5 1.5 0 0 1 20 6.5v11a1.5 1.5 0 0 1-1.5 1.5H14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path>
+                            <path d="M11 8.2 14.8 12 11 15.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path>
+                            <path d="M4.5 12h10.1" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path>
+                        </svg>
+                    }
+                    else
+                    {
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M10 5H5.5A1.5 1.5 0 0 0 4 6.5v11A1.5 1.5 0 0 0 5.5 19H10" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path>
+                            <path d="M13 8.2 9.2 12 13 15.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path>
+                            <path d="M19.5 12H9.4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path>
+                        </svg>
+                    }
+                </span>
+                <span>@sessionActionLabel</span>
+            </button>
+
+            <div class="sidebar-account-card">
+                <div class="profile-avatar">@profileInitials</div>
+                <div class="profile-copy">
+                    <div class="profile-name">@profileName</div>
+                    <div class="profile-role">@profileMeta</div>
+                </div>
+            </div>
+        </div>
+    </div>
 </MudDrawer>
 
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
 
-@code
-{
-    private bool _open = false;
+    private bool _open = true;
+    private bool isGuestMode;
+    private bool isAuthenticated;
+    private string profileName = "Guest Account";
+    private string profileMeta = "LOCAL SESSION";
+    private string profileInitials = "G";
 
-    private void ToggleDrawer()
+    private bool showSignIn => isGuestMode || !isAuthenticated;
+    private string sessionActionLabel => showSignIn ? "Sign In" : "Sign Out";
+
+    protected override async Task OnParametersSetAsync()
     {
-        _open = !_open;
+        var authState = AuthenticationStateTask is null
+            ? new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()))
+            : await AuthenticationStateTask;
+
+        var user = authState.User;
+        isAuthenticated = user.Identity?.IsAuthenticated == true;
+        isGuestMode = string.Equals(user.FindFirst("auth_mode")?.Value, "guest", StringComparison.OrdinalIgnoreCase);
+
+        if (showSignIn)
+        {
+            profileName = "Guest Account";
+            profileMeta = "LOCAL SESSION";
+            profileInitials = "G";
+            return;
+        }
+
+        profileName =
+            user.FindFirst(ClaimTypes.Name)?.Value ??
+            user.FindFirst("name")?.Value ??
+            user.FindFirst("cognito:username")?.Value ??
+            user.FindFirst("username")?.Value ??
+            user.FindFirst(ClaimTypes.Email)?.Value ??
+            "Account";
+
+        profileMeta =
+            user.FindFirst(ClaimTypes.Email)?.Value ??
+            user.FindFirst("email")?.Value ??
+            "SIGNED IN";
+
+        profileInitials = GetInitials(profileName);
+    }
+
+    private async Task OpenCreateDialogAsync(string initialType)
+    {
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var parameters = new DialogParameters
+        {
+            { "SelectedDate", DateTime.Today },
+            { "InitialType", initialType }
+        };
+
+        await DialogService.ShowAsync<CreateCalendarItemDialog>("Create item", parameters, options);
+    }
+
+    private void OpenNewNote()
+    {
+        Navigation.NavigateTo("/add-note");
+    }
+
+    private async Task HandleSessionActionAsync()
+    {
+        if (showSignIn)
+        {
+            Navigation.NavigateTo("/login?mode=signin");
+            return;
+        }
+
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/login", true);
+    }
+
+    private static string GetInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return "A";
+        }
+
+        var initials = name
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Take(2)
+            .Select(part => char.ToUpperInvariant(part[0]));
+
+        return string.Concat(initials);
     }
 }
-
-@* <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
-    <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="dashboard" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Dashboard
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="notes">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Notes
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="directory">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Directory
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="taskboard">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> TaskBoard
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="calendar">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Calendar
-            </NavLink>
-        </div>
-    </nav>
-</div> *@

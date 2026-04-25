@@ -1,0 +1,9 @@
+@page "/add-note"
+@using ActualBlazorStandAloneAppSPA.Components.Editor
+@using Microsoft.AspNetCore.Authorization
+@layout MainLayout
+@attribute [Authorize]
+
+<PageTitle>New Note</PageTitle>
+
+<NoteEditorHost BreadcrumbRootLabel="Root" BreadcrumbCurrentLabel="New Note" />
