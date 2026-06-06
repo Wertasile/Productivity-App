@@ -1,122 +1,214 @@
-@using MudBlazor
+@using System.Globalization
 @inject ItemService ItemService
 
-<MudDialog>
-    <TitleContent>Edit Reminder</TitleContent>
-    <DialogContent>
-        @if (!string.IsNullOrWhiteSpace(errorMessage))
-        {
-            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4">
-                @errorMessage
-            </MudAlert>
-        }
+@if (IsVisible)
+{
+    <div class="cd-backdrop" @onclick="Cancel"></div>
 
-        <div class="d-flex flex-column gap-3">
-            <MudTextField @bind-Value="editModel.Name"
-                          Label="Name"
-                          Variant="Variant.Outlined"
-                          Required="true" />
-
-            <MudTextField @bind-Value="editModel.Description"
-                          Label="Description"
-                          Variant="Variant.Outlined"
-                          Lines="4" />
-
-            <MudCheckBox @bind-Value="editModel.IsAcknowledged" Label="Acknowledged" />
-
-            <MudDatePicker Label="Reminder date"
-                           Date="reminderDate"
-                           DateChanged="OnReminderDateChanged"
-                           Variant="Variant.Outlined" />
-
-            <MudTimePicker Label="Reminder time"
-                           Time="reminderTime"
-                           TimeChanged="OnReminderTimeChanged"
-                           AmPm="true"
-                           Variant="Variant.Outlined" />
+    <div class="cd-panel" role="dialog" aria-modal="true" aria-labelledby="er-title">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2 id="er-title">Edit Reminder</h2>
+            <button @onclick="Cancel" aria-label="Close">
+                <Blazicon Svg="Lucide.X" />
+            </button>
         </div>
-    </DialogContent>
-    <DialogActions>
-        <MudButton Color="Color.Error" OnClick="DeleteAsync">Delete</MudButton>
-        <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" OnClick="SubmitAsync">Save</MudButton>
-    </DialogActions>
-</MudDialog>
+
+        <div class="d-flex flex-column gap-6">
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <div class="cd-error" role="alert">@errorMessage</div>
+            }
+
+            <div class="cd-form">
+                <div class="cd-field">
+                    <label for="er-name">Name <span class="cd-required">*</span></label>
+                    <input id="er-name" type="text" placeholder="Reminder name" @bind="editModel.Name"
+                           @bind:event="oninput" />
+                </div>
+
+                <div class="cd-field">
+                    <label for="er-desc">Description</label>
+                    <textarea id="er-desc" placeholder="Optional description" rows="4" @bind="editModel.Description"
+                              @bind:event="oninput"></textarea>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <input id="er-acknowledged" type="checkbox" style="width: auto; padding: 0;"
+                           @bind="editModel.IsAcknowledged" />
+                    <label for="er-acknowledged" style="margin: 0;">Acknowledged</label>
+                </div>
+
+                <div class="cd-field">
+                    <label for="er-datetime">Reminder date & time</label>
+                    <input id="er-datetime" type="datetime-local" value="@reminderDateTimeInput"
+                           @onchange="e => reminderDateTimeInput = FormatDateTimeLocalValue(e.Value)" />
+                </div>
+
+                <div class="cd-field">
+                    <label for="er-priority">Priority</label>
+                    <select id="er-priority" @bind="editModel.Priority">
+                        @foreach (var option in PriorityOptions)
+                        {
+                            <option value="@option.Value">@option.Label</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div class="cd-footer d-flex justify-content-between align-items-center">
+                <button style="color: #C53030;" @onclick="DeleteAsync" disabled="@isSubmitting"><Blazicon Svg="Lucide.Trash" /></button>
+                <div class="d-flex gap-2">
+                    <button class="secondary-btn" @onclick="Cancel" disabled="@isSubmitting">Cancel</button>
+                    <button class="primary-btn" @onclick="SubmitAsync" disabled="@isSubmitting">
+                        @(isSubmitting ? "Saving…" : "Save")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
-    [CascadingParameter]
-    private IMudDialogInstance MudDialog { get; set; } = default!;
-
-    [Parameter]
-    public Reminder Reminder { get; set; } = new();
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public Reminder Reminder { get; set; } = new();
+    [Parameter] public EventCallback<bool> OnClose { get; set; }
 
     private readonly Reminder editModel = new();
-    private DateTime? reminderDate;
-    private TimeSpan? reminderTime;
+    private string reminderDateTimeInput = string.Empty;
+    private bool isSubmitting;
     private string? errorMessage;
+    private string _lastId = string.Empty;
 
-    protected override void OnInitialized()
+    protected override void OnParametersSet()
     {
+        if (!IsVisible)
+        {
+            _lastId = string.Empty;
+            return;
+        }
+
+        var currentId = Reminder.Id ?? string.Empty;
+        if (currentId == _lastId) return;
+
+        _lastId = currentId;
+        errorMessage = null;
+
         editModel.Id = Reminder.Id;
         editModel.UserId = Reminder.UserId;
         editModel.Name = Reminder.Name;
         editModel.Description = Reminder.Description;
         editModel.IsAcknowledged = Reminder.IsAcknowledged;
-        editModel.ReminderDate = Reminder.ReminderDate;
+        editModel.ReminderDateTime = Reminder.ReminderDateTime;
+        editModel.Priority = Math.Clamp(Reminder.Priority, 0, 3);
         editModel.EntityType = Reminder.EntityType;
         editModel.CreatedAt = Reminder.CreatedAt;
         editModel.UpdatedAt = Reminder.UpdatedAt;
 
-        reminderDate = editModel.ReminderDate.Date;
-        reminderTime = editModel.ReminderDate.TimeOfDay;
+        reminderDateTimeInput = ToDateTimeLocalValue(editModel.ReminderDateTime);
     }
 
-    private void OnReminderDateChanged(DateTime? value)
+    private async Task SubmitAsync()
     {
-        reminderDate = value;
-        editModel.ReminderDate = CombineDateAndTime(reminderDate, reminderTime);
-    }
+        if (isSubmitting) return;
 
-    private void OnReminderTimeChanged(TimeSpan? value)
-    {
-        reminderTime = value;
-        editModel.ReminderDate = CombineDateAndTime(reminderDate, reminderTime);
-    }
-
-    private async System.Threading.Tasks.Task SubmitAsync()
-    {
         if (string.IsNullOrWhiteSpace(editModel.Name))
         {
             errorMessage = "Reminder name is required.";
             return;
         }
 
-        editModel.ReminderDate = CombineDateAndTime(reminderDate, reminderTime);
-        editModel.UpdatedAt = DateTime.UtcNow;
+        errorMessage = null;
 
-        var updatedItem = await ItemService.UpdateItemAsync(editModel);
-
-        if (updatedItem is null)
+        try
         {
-            errorMessage = "The reminder could not be updated.";
-            return;
+            isSubmitting = true;
+
+            if (!TryParseDateTimeLocal(reminderDateTimeInput, out var reminderDateTime))
+            {
+                errorMessage = "Reminder date and time is required.";
+                return;
+            }
+
+            editModel.ReminderDateTime = reminderDateTime;
+            editModel.Priority = Math.Clamp(editModel.Priority, 0, 3);
+            editModel.UpdatedAt = DateTime.UtcNow;
+
+            var updatedItem = await ItemService.UpdateItemAsync(editModel);
+
+            if (updatedItem is null)
+            {
+                errorMessage = "The reminder could not be updated.";
+                return;
+            }
+
+            await OnClose.InvokeAsync(true);
         }
-
-        MudDialog.Close(DialogResult.Ok(true));
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
     }
 
-    private async System.Threading.Tasks.Task DeleteAsync()
+    private async Task DeleteAsync()
     {
-        await ItemService.DeleteItemAsync(editModel.Id);
-        MudDialog.Close(DialogResult.Ok(true));
+        if (isSubmitting) return;
+
+        try
+        {
+            isSubmitting = true;
+            await ItemService.DeleteItemAsync(editModel.Id);
+            await OnClose.InvokeAsync(true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
     }
 
-    private void Cancel() => MudDialog.Cancel();
+    private async Task Cancel() => await OnClose.InvokeAsync(false);
 
-    private static DateTime CombineDateAndTime(DateTime? date, TimeSpan? time)
+    private static bool TryParseDateTimeLocal(string? value, out DateTime parsed)
     {
-        var actualDate = (date ?? DateTime.Today).Date;
-        var actualTime = time ?? TimeSpan.Zero;
-        return actualDate.Add(actualTime);
+        parsed = default;
+        if (string.IsNullOrWhiteSpace(value)) return false;
+        if (DateTime.TryParseExact(value, DateTimeLocalFormats,
+                CultureInfo.InvariantCulture, DateTimeStyles.None, out parsed))
+            return true;
+        return DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsed);
     }
+
+    private static string FormatDateTimeLocalValue(object? value)
+    {
+        if (value is DateTime dateTime)
+            return dateTime == default ? string.Empty : dateTime.ToString("yyyy-MM-ddTHH:mm");
+
+        var stringValue = value?.ToString();
+        return string.IsNullOrWhiteSpace(stringValue) ? string.Empty : stringValue;
+    }
+
+    private static string ToDateTimeLocalValue(DateTime value)
+        => value == default ? string.Empty : value.ToString("yyyy-MM-ddTHH:mm");
+
+    private static readonly string[] DateTimeLocalFormats =
+    {
+        "yyyy-MM-ddTHH:mm",
+        "yyyy-MM-ddTHH:mm:ss",
+        "yyyy-MM-ddTHH:mm:ss.fff"
+    };
+
+    private static readonly (int Value, string Label)[] PriorityOptions =
+    {
+        (0, "No Priority"),
+        (1, "Low Priority (Green)"),
+        (2, "Medium Priority (Yellow)"),
+        (3, "High Priority (Red)")
+    };
 }

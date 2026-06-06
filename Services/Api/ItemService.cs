@@ -51,9 +51,11 @@ public class ItemService
                                 Title = task.Title.Trim(),
                                 Description = task.Description,
                                 Progress = Math.Clamp(task.Progress, 0, 100),
-                                IsCompleted = task.IsCompleted,
-                                CompletionDate = task.IsCompleted ? task.CompletionDate ?? DateTime.UtcNow : null,
-                                DueDate = task.DueDate,
+                                Priority = NormalizePriority(task.Priority),
+                                Status = NormalizeTaskStatus(task.Status),
+                                CompletionDate = task.CompletionDate,
+                                Start = task.Start,
+                                End = task.End,
                                 EntityType = "TASK",
                                 // CreatedAt = DateTime.UtcNow,
                                 // UpdatedAt = DateTime.UtcNow
@@ -71,7 +73,8 @@ public class ItemService
                                 Name = reminder.Name.Trim(),
                                 Description = reminder.Description,
                                 IsAcknowledged = reminder.IsAcknowledged,
-                                ReminderDate = reminder.ReminderDate,
+                                ReminderDateTime = reminder.ReminderDateTime,
+                                Priority = NormalizePriority(reminder.Priority),
                                 EntityType = "REMINDER",
                                 // CreatedAt = DateTime.UtcNow,
                                 // UpdatedAt = DateTime.UtcNow
@@ -103,9 +106,11 @@ public class ItemService
                 Title = t.Title?.Trim(),
                 Description = t.Description,
                 Progress = Math.Clamp(t.Progress, 0, 100),
-                IsCompleted = t.IsCompleted,
-                CompletionDate = t.IsCompleted ? t.CompletionDate : null,
-                DueDate = t.DueDate,
+                Priority = NormalizePriority(t.Priority),
+                Status = NormalizeTaskStatus(t.Status),
+                CompletionDate = t.CompletionDate,
+                Start = t.Start,
+                End = t.End,
                 CreatedAt = t.CreatedAt,
                 UpdatedAt = t.UpdatedAt
             },
@@ -115,7 +120,8 @@ public class ItemService
                 Name = r.Name?.Trim(),
                 Description = r.Description,
                 IsAcknowledged = r.IsAcknowledged,
-                ReminderDate = r.ReminderDate,
+                ReminderDateTime = r.ReminderDateTime,
+                Priority = NormalizePriority(r.Priority),
                 CreatedAt = r.CreatedAt,
                 UpdatedAt = r.UpdatedAt
             },
@@ -125,7 +131,23 @@ public class ItemService
         // actualy response
 
         var response = await _httpClient.PostAsJsonAsync("Prod/calendar/item", payload, options);
-        return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<BaseItem>() : null;
+        if (!response.IsSuccessStatusCode) return null;
+
+        // Some backend responses omit the BaseItem polymorphic discriminator (EntityType).
+        // If creation succeeded (2xx), fall back to returning the original item.
+        try
+        {
+            var created = await response.Content.ReadFromJsonAsync<BaseItem>();
+            return created ?? item;
+        }
+        catch (JsonException)
+        {
+            return item;
+        }
+        catch (NotSupportedException)
+        {
+            return item;
+        }
     }
 
     public async Task<string> DeleteItemAsync(string itemId)
@@ -165,9 +187,11 @@ public class ItemService
                             existingTask.Title = task.Title.Trim();
                             existingTask.Description = task.Description;
                             existingTask.Progress = Math.Clamp(task.Progress, 0, 100);
-                            existingTask.IsCompleted = task.IsCompleted;
-                            existingTask.CompletionDate = task.IsCompleted ? task.CompletionDate ?? DateTime.UtcNow : null;
-                            existingTask.DueDate = task.DueDate;
+                            existingTask.Priority = NormalizePriority(task.Priority);
+                            existingTask.Status = NormalizeTaskStatus(task.Status);
+                            existingTask.CompletionDate = task.CompletionDate;
+                            existingTask.Start = task.Start;
+                            existingTask.End = task.End;
                             existingTask.UpdatedAt = DateTime.UtcNow;
 
                             return existingTask;
@@ -183,7 +207,8 @@ public class ItemService
                             existingReminder.Name = reminder.Name.Trim();
                             existingReminder.Description = reminder.Description;
                             existingReminder.IsAcknowledged = reminder.IsAcknowledged;
-                            existingReminder.ReminderDate = reminder.ReminderDate;
+                            existingReminder.ReminderDateTime = reminder.ReminderDateTime;
+                            existingReminder.Priority = NormalizePriority(reminder.Priority);
                             existingReminder.UpdatedAt = DateTime.UtcNow;
 
                             return existingReminder;
@@ -214,20 +239,23 @@ public class ItemService
                 Title = t.Title?.Trim(),
                 Description = t.Description,
                 Progress = Math.Clamp(t.Progress, 0, 100),
-                IsCompleted = t.IsCompleted,
-                CompletionDate = t.IsCompleted ? t.CompletionDate : null,
-                DueDate = t.DueDate,
+                Priority = NormalizePriority(t.Priority),
+                Status = NormalizeTaskStatus(t.Status),
+                CompletionDate = t.CompletionDate,
+                Start = t.Start,
+                End = t.End,
                 CreatedAt = t.CreatedAt,
                 UpdatedAt = t.UpdatedAt
             },
             Reminder r => new
-            {   
+            {
                 Id = r.Id,
                 EntityType = r.EntityType,
                 Name = r.Name?.Trim(),
                 Description = r.Description,
                 IsAcknowledged = r.IsAcknowledged,
-                ReminderDate = r.ReminderDate,
+                ReminderDateTime = r.ReminderDateTime,
+                Priority = NormalizePriority(r.Priority),
                 CreatedAt = r.CreatedAt,
                 UpdatedAt = r.UpdatedAt
             },
@@ -237,11 +265,47 @@ public class ItemService
         Console.WriteLine($"PUT ID: '{item.Id}'");
 
         var response = await _httpClient.PutAsJsonAsync($"Prod/calendar/item/{item.Id}", payload, options);
-        return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<BaseItem>() : null;
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        // Some backend responses omit BaseItem polymorphic discriminator (EntityType).
+        // If update succeeded (2xx), treat it as success and return the current item.
+        try
+        {
+            var updatedItem = await response.Content.ReadFromJsonAsync<BaseItem>();
+            return updatedItem ?? item;
+        }
+        catch (JsonException)
+        {
+            return item;
+        }
+        catch (NotSupportedException)
+        {
+            return item;
+        }
     }
 
     private async Task<bool> IsGuestModeAsync()
     {
         return await _sessionStore.GetGuestSessionAsync() is not null;
+    }
+
+    private static int NormalizePriority(int priority) => Math.Clamp(priority, 0, 3);
+
+    private static string NormalizeTaskStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status)) return "Not Started";
+
+        return status.Trim() switch
+        {
+            "Not Started" => "Not Started",
+            "In Progress" => "In Progress",
+            "Completed" => "Completed",
+            "Halted" => "Halted",
+            "Hiatus" => "Hiatus",
+            _ => "Not Started"
+        };
     }
 }

@@ -4,9 +4,13 @@ public class LocalAppState
 
     public List<Note> Notes { get; set; } = new();
 
+    public List<Project> Projects { get; set; } = new();
+
     public List<TaskItem> Tasks { get; set; } = new();
 
     public List<Reminder> Reminders { get; set; } = new();
+
+    public List<JournalItem> Journals { get; set; } = new();
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 

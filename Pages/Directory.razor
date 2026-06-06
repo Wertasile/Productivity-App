@@ -199,7 +199,7 @@
                                          @onkeydown="@(async e => { if (e.Key == "Enter" || e.Key == " ") await SelectNoteAsync(noteItem.Note); })">
                                     <div class="note-tab"></div>
                                     <h3>@noteItem.Note.Title</h3>
-                                    <p>@GetNotePreview(noteItem.Note.Content)</p>
+                                    <p>@GetPreview(noteItem.Note.Content)</p>
                                     <div class="note-meta">@GetRelativeTime(noteItem.Note.UpdatedAt)</div>
                                 </article>
                             }
@@ -660,18 +660,18 @@ Icons.Material.Outlined.ChevronRight);
     }
 
     // functions to generate note preview text and relative time display
-    private static string GetNotePreview(string? content)
+    private static string GetPreview(string? content)
     {
         if (string.IsNullOrWhiteSpace(content))
         {
-            return "Open note";
+            return "Click to open";
         }
 
         var plainText = System.Text.RegularExpressions.Regex.Replace(content, "<.*?>", string.Empty).Trim();
 
         if (string.IsNullOrWhiteSpace(plainText))
         {
-            return "Open note";
+            return "Click to open";
         }
 
         const int maxLength = 140;

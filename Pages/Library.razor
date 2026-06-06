@@ -1,0 +1,275 @@
+@page "/library"
+@using Microsoft.AspNetCore.Authorization
+@layout MainLayout
+@attribute [Authorize]
+@inject NoteService NoteService
+@inject FolderService FolderService
+
+<div class="library-page">
+
+    <div class="tree-view">
+        <h3>Folders</h3>
+        @if (treeView.Folders != null && treeView.Folders.Count > 0)
+        {
+            <div>
+                @foreach (var folder in treeView.Folders)
+                {
+                    @* A folder *@
+                    <div class="tree-folder">
+
+                        @* The folder item itself *@
+                        <div 
+                            class="tree-folder-item d-flex flex-row gap-2 align-items-center @(currentFolderId == folder.Id ? "selected" : "")" 
+                            @onclick="@(() => SelectFolderAsync(folder.Id))"
+                        >
+                            <div>
+                                <Blazicon Svg="Lucide.ChevronRight" />
+                            </div>
+                            <div>
+                                <Blazicon Svg="Lucide.Folder" />
+                            </div>
+                            <div class="lil-text">@folder.Name</div>
+                        </div>
+
+                        @* The subfolder items *@
+
+                        <div class="tree-subfolder">
+                            @foreach (var subFolder in folder.Folders)
+                            {
+                                <div 
+                                    class="tree-folder-item d-flex flex-row gap-2 align-items-center @(currentFolderId == subFolder.Id ? "selected" : "")" 
+                                    @onclick="@(() => SelectFolderAsync(subFolder.Id))"
+                                >
+                                    <div>
+                                        <Blazicon Svg="Lucide.ChevronRight" />
+                                    </div>
+                                    <div>
+                                        <Blazicon Svg="Lucide.Folder" />
+                                    </div>
+                                    <div class="lil-text">@subFolder.Name</div>
+                                </div>
+
+
+                            }
+
+                            @foreach (var note in folder.Notes)
+                            {
+                                <div class="tree-note-item @(selectedNote?.Id == note.Id ? "selected" : "")" @onclick="@(() => SelectNoteAsync(note.Id))">
+                                    <div>
+                                        <Blazicon Svg="Lucide.FileText" />
+                                    </div>
+                                    <div class="lil-text">@note.Title</div>
+                                </div>
+                            }
+
+                            
+                        </div>
+
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <p>No folders found.</p>
+        }
+
+        @* for loop to get notes in root folder (if any)
+         *@
+        @if (treeView.Notes != null && treeView.Notes.Count > 0)
+        {
+            <div>
+                @foreach (var note in treeView.Notes)
+                {
+                    <div 
+                        class="tree-note-item @(selectedNote?.Id == note.Id ? "selected" : "")"
+                        @onclick="@(() => SelectNoteAsync(note.Id))"
+                    >
+                        <div>
+                            <Blazicon Svg="Lucide.FileText" />
+                        </div>
+                        <div class="lil-text">@note.Title</div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <p>No notes found.</p>
+        }
+
+    </div>
+
+    <div class="content-area">
+
+        
+        @if (!noteSelected)
+        {
+            <div class="d-flex flex-column gap-12">
+
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            @foreach (var folder in FolderPath)
+                            {
+                                <li class="breadcrumb-item @(folder.Id == currentFolderId ? "active" : "")" @onclick="@(() => SelectFolderAsync(folder.Id))">
+                                    @folder.Name
+                                </li>
+                            }
+                        </ol>
+                    </nav>
+                </div>
+                <div>
+                    <h2>Currently In @currentFolderContent.Metadata.Name</h2>
+                </div>
+
+                <div class="folders d-flex flex-column gap-8">
+                    <h3>Folders</h3>
+                    <div class="d-flex flex-row gap-2 flex-wrap">
+                        @if (currentFolderContent.Folders == null || currentFolderContent.Folders.Count == 0)
+                        {
+                            <p>No subfolders found in this folder.</p>
+                        }
+                        @foreach (var folder in currentFolderContent.Folders)
+                        {
+                            <div class="folder @(currentFolderId == folder.Id ? "selected" : "")" @onclick="@(() => SelectFolderAsync(folder.Id))">
+                                <Blazicon Svg="Lucide.Folder" />
+                                <div class="lil-text">@folder.Name</div>
+                            </div>
+                        }
+                    </div>
+
+                </div>
+
+                <div class="notes d-flex flex-column gap-8">
+                    <h3>Notes</h3>
+                    <div class="d-flex flex-row gap-2 flex-wrap">
+                        @if (currentFolderContent.Notes == null || currentFolderContent.Notes.Count == 0)
+                        {
+                            <p>No notes found in this folder.</p>
+                        }
+                        @foreach (var note in currentFolderContent.Notes)
+                        {
+                            <div class="note position-relative @(selectedNote?.Id == note.Id ? "selected" : "")" @onclick="@(() => SelectNoteAsync(note.Id))">
+                                <div class="position-absolute" style="top:10px;right:10px;opacity:0.5;">
+                                    <Blazicon Svg="Lucide.FileText" />
+                                </div>
+                                <div class="note-header">@note.Title</div>
+                                <div class="lil-text">@GetPreview(note.Content)</div>
+                                <div class="lil-text">@GetRelativeTime(note.UpdatedAt)</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <NoteEditorHost />
+        }
+
+    </div>
+
+</div>
+
+@code {
+    private const string RootFolderId = "ROOT";
+    private TreeView treeView = new TreeView();
+
+    // ID OF SELECTED FOLDER
+    private string currentFolderId = RootFolderId;
+
+    // LOADING IN CURRENT FOLDER CONTENT
+    private FolderContent currentFolderContent = new() { Metadata = new FolderMetadata { Id = RootFolderId, Name = "Root" } };
+
+    private bool noteSelected = false;
+
+    private Note selectedNote;
+
+    private List<Folder> FolderPath = new List<Folder>() { new Folder { Id = RootFolderId, Name = "Root" } };
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        treeView = await FolderService.GetFolderTree();
+        Console.WriteLine("TreeView loaded with " + treeView.Folders.Count + " folders.");
+
+        currentFolderContent = await FolderService.GetFolder(currentFolderId);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Whenever parameters change, we can refresh the folder content
+        currentFolderContent = await FolderService.GetFolder(currentFolderId);
+    }
+
+    private async Task SelectNoteAsync(string noteId)
+    {
+        var note = await NoteService.GetNoteAsync(int.Parse(noteId));
+        Console.WriteLine($"Selected note: {note.Title}");
+        selectedNote = note;
+        noteSelected = true;
+    }
+
+    private async Task SelectFolderAsync(string folderId)
+    {
+        currentFolderId = folderId;
+        noteSelected = false;
+        currentFolderContent = await FolderService.GetFolder(currentFolderId);
+    }
+
+
+    private static string GetPreview(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return "Click to open";
+        }
+
+        var plainText = System.Text.RegularExpressions.Regex.Replace(content, "<.*?>", string.Empty).Trim();
+
+        if (string.IsNullOrWhiteSpace(plainText))
+        {
+            return "Click to open";
+        }
+
+        const int maxLength = 140;
+        return plainText.Length <= maxLength ? plainText : $"{plainText[..maxLength].Trim()}...";
+    }
+
+    private static string GetRelativeTime(DateTime value)
+    {
+        var delta = DateTime.UtcNow - value.ToUniversalTime();
+
+        if (delta.TotalMinutes < 1)
+        {
+            return "JUST NOW";
+        }
+
+        if (delta.TotalHours < 1)
+        {
+            return $"{Math.Max(1, (int)delta.TotalMinutes)} MINUTES AGO";
+        }
+
+        if (delta.TotalDays < 1)
+        {
+            return $"{Math.Max(1, (int)delta.TotalHours)} HOURS AGO";
+        }
+
+        if (delta.TotalDays < 2)
+        {
+            return "YESTERDAY";
+        }
+
+        if (delta.TotalDays < 7)
+        {
+            return $"{Math.Max(1, (int)delta.TotalDays)} DAYS AGO";
+        }
+
+        return value.ToLocalTime().ToString("dd MMM yyyy").ToUpperInvariant();
+    }
+
+
+
+
+}

@@ -2,10 +2,169 @@
 @using Microsoft.AspNetCore.Authorization
 @layout MainLayout
 @attribute [Authorize]
+@inject JournalService JournalService
 
 <PageTitle>Journal</PageTitle>
 
-<section>
-    <h1>Journal</h1>
-    <p>This page is ready for the journal experience. Content and interactions can be added next.</p>
-</section>
+<div class="journal-page">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="mini-text">@_currentWeekStart.ToString("MMMM yyyy").ToUpper()</div>
+        <div class="d-flex gap-2">
+            <button @onclick="PreviousWeek">
+                <Blazicon Svg="Lucide.ChevronLeft"/>
+            </button>
+            <div class="date-scroll d-flex gap-2">
+                @foreach (var day in Week)
+                {
+                    <div 
+                        class="@((currentDate == DateTime.ParseExact(day, "dddd yyyy MM dd", null).ToString("yyyy-MM-dd") ? "selected" : "")) date-item d-flex flex-column"
+                        @onclick="@(() => selectDate(day))"
+                    >
+                        <div class="mini-text">@day.Split(" ")[0][0..2]</div>
+                        <h3>@day.Split(" ")[3]</h3>
+                    </div>
+                }
+            </div>
+            <button @onclick="NextWeek">
+                <Blazicon Svg="Lucide.ChevronRight"/>
+            </button>
+        </div>
+        <button type="button" class="primary-btn" @onclick="Save" disabled="@isSaving">
+            @(isSaving ? "Saving..." : hasSaved ? "Save Changes" : "Save")
+        </button>
+    </div>
+
+    <div class="note-editor flex-grow-1">
+        <div class="top-line"></div>
+        <TiptapEditor @ref="tiptapEditor"
+                      EditorId="@editorId"
+                      InitialContent="@initialContent"
+                      OnChange="(contentObj) => HandleChange(contentObj)" />
+    </div>
+</div>
+
+@code {
+    private TiptapEditor? tiptapEditor;
+
+    // for note creation, we generate a new editorId to ensure a fresh instance of the editor is created with the initial content.
+    private string editorId = Guid.NewGuid().ToString();
+    private string initialContent = "<p></p>";
+    private string currentHtml = "";
+    private JournalItem journalModel = new();
+    private string currentDate = DateTime.Now.Date.ToString("yyyy-MM-dd");
+    private bool isSaving;
+    private bool hasSaved;
+
+    private DateTime _currentWeekStart;
+    private List<string> Week = new();
+
+    private void GenerateWeek()
+    {
+        Week.Clear();
+
+        for (int i = 0; i < 7; i++)
+        {
+            var date = _currentWeekStart.AddDays(i);
+            Week.Add($"{date:dddd yyyy MM dd}");
+        }
+        Console.WriteLine(string.Join(", ", Week));
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        var today = await JournalService.GetJournalByDateAsync(currentDate);
+        if (today is not null)
+        {
+            journalModel = today;
+            hasSaved = true;
+            initialContent = string.IsNullOrWhiteSpace(today.Content) ? "<p></p>" : today.Content;
+            currentHtml = initialContent;
+        }
+        _currentWeekStart = GetStartOfWeek(DateTime.Today);
+        GenerateWeek();
+    }
+
+    private async Task selectDate(string date)
+    {
+        Console.WriteLine($"Selected date: {date}");
+        var parsedDate = DateTime.ParseExact(date, "dddd yyyy MM dd", null);
+        var outputDate = parsedDate.ToString("yyyy-MM-dd");
+        currentDate = outputDate;
+        Console.WriteLine($"Formatted date: {outputDate}");
+        var selectedDay = await JournalService.GetJournalByDateAsync(currentDate);
+        if (selectedDay is not null)
+        {
+            journalModel = selectedDay;
+            hasSaved = true;
+            currentHtml = string.IsNullOrWhiteSpace(selectedDay.Content) ? "<p></p>" : selectedDay.Content;
+        }
+        else
+        {
+            journalModel = new JournalItem();
+            hasSaved = false;
+            currentHtml = "<p></p>";
+        }
+
+        if (tiptapEditor is not null)
+            await tiptapEditor.SetContentAsync(currentHtml);
+    }
+
+    private void PreviousWeek()
+    {
+        _currentWeekStart = _currentWeekStart.AddDays(-7);
+        GenerateWeek();
+    }
+
+    private void NextWeek()
+    {
+        _currentWeekStart = _currentWeekStart.AddDays(7);
+        GenerateWeek();
+    }
+
+    private DateTime GetStartOfWeek(DateTime date)
+    {
+        int diff = (7 + (date.DayOfWeek - DayOfWeek.Monday)) % 7;
+        return date.AddDays(-diff).Date;
+    }
+
+    // method called whenever content of editor changes, and it updates the currentHtml variable with the latest HTML content from the editor. 
+    // This allows us to keep track of the current state of the editor's content so that when the user clicks save, we can send the correct content to the server.
+    private void HandleChange(TiptapEditor.EditorContentChangedArgs content)
+    {
+        currentHtml = content.Html;
+    }
+
+    private async Task Save()
+    {
+        if (isSaving) return;
+        isSaving = true;
+
+        try
+        {
+            journalModel.Content = tiptapEditor is not null
+                ? await tiptapEditor.GetContentAsync()
+                : currentHtml;
+            journalModel.Date = DateOnly.ParseExact(currentDate, "yyyy-MM-dd", null);
+
+            if (hasSaved && !string.IsNullOrWhiteSpace(journalModel.Id))
+            {
+                Console.WriteLine(journalModel.Content);
+                journalModel = await JournalService.UpdateJournal(journalModel);
+            }
+            else
+            {
+                var created = await JournalService.CreateJournal(journalModel);
+                if (created is not null)
+                {
+                    journalModel = created;
+                    hasSaved = true;
+                }
+            }
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}

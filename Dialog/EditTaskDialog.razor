@@ -1,70 +1,123 @@
-@using MudBlazor
+@using System.Globalization
 @inject ItemService ItemService
 
-<MudDialog>
-    <TitleContent>Edit Task</TitleContent>
-    <DialogContent>
-        @if (!string.IsNullOrWhiteSpace(errorMessage))
-        {
-            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4">
-                @errorMessage
-            </MudAlert>
-        }
+@if (IsVisible)
+{
+    <div class="cd-backdrop" @onclick="Cancel"></div>
 
-        <div class="d-flex flex-column gap-3">
-            <MudTextField @bind-Value="editModel.Title"
-                          Label="Title"
-                          Variant="Variant.Outlined"
-                          Required="true" />
-
-            <MudTextField @bind-Value="editModel.Description"
-                          Label="Description"
-                          Variant="Variant.Outlined"
-                          Lines="4" />
-
-            <MudNumericField T="int"
-                             @bind-Value="editModel.Progress"
-                             Label="Progress"
-                             Min="0"
-                             Max="100"
-                             Variant="Variant.Outlined" />
-
-            <MudCheckBox @bind-Value="editModel.IsCompleted" Label="Completed" />
-
-            <MudDatePicker Label="Due date"
-                           Date="taskDate"
-                           DateChanged="OnTaskDateChanged"
-                           Variant="Variant.Outlined" />
-
-            <MudTimePicker Label="Due time"
-                           Time="taskTime"
-                           TimeChanged="OnTaskTimeChanged"
-                           AmPm="true"
-                           Variant="Variant.Outlined" />
+    <div class="cd-panel" role="dialog" aria-modal="true" aria-labelledby="et-title">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2 id="et-title">Edit Task</h2>
+            <button @onclick="Cancel" aria-label="Close">
+                <Blazicon Svg="Lucide.X" />
+            </button>
         </div>
-    </DialogContent>
-    <DialogActions>
-        <MudButton Color="Color.Error" OnClick="DeleteAsync">Delete</MudButton>
-        <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" OnClick="SubmitAsync">Save</MudButton>
-    </DialogActions>
-</MudDialog>
+
+        <div class="d-flex flex-column gap-6">
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <div class="cd-error" role="alert">@errorMessage</div>
+            }
+
+            <div class="cd-form">
+                <div class="cd-field">
+                    <label for="et-title-input">Title <span class="cd-required">*</span></label>
+                    <input id="et-title-input" type="text" placeholder="Task title" @bind="editModel.Title"
+                           @bind:event="oninput" />
+                </div>
+
+                <div class="cd-field">
+                    <label for="et-desc">Description</label>
+                    <textarea id="et-desc" placeholder="Optional description" rows="4" @bind="editModel.Description"
+                              @bind:event="oninput"></textarea>
+                </div>
+
+                <div class="cd-field">
+                    <label for="et-progress">Progress (0–100)</label>
+                    <input id="et-progress" type="range" min="0" max="100" @bind="editModel.Progress"
+                           @bind:event="oninput" />
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <label for="et-priority">Priority</label>
+                    <select id="et-priority" @bind="editModel.Priority">
+                        @foreach (var option in PriorityOptions)
+                        {
+                            <option value="@option.Value">@option.Label</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="cd-field">
+                    <label for="et-status">Status</label>
+                    <select id="et-status" @bind="editModel.Status">
+                        @foreach (var status in TaskStatusOptions)
+                        {
+                            <option value="@status">@status</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="cd-field">
+                    <label for="et-start">Start <span class="cd-required">*</span></label>
+                    <input id="et-start" type="datetime-local" value="@taskStartInput"
+                           @onchange="e => taskStartInput = FormatDateTimeLocalValue(e.Value)" />
+                </div>
+
+                <div class="cd-field">
+                    <label for="et-end">End <span class="cd-required">*</span></label>
+                    <input id="et-end" type="datetime-local" value="@taskEndInput"
+                           @onchange="e => taskEndInput = FormatDateTimeLocalValue(e.Value)" />
+                </div>
+
+                <div class="cd-field">
+                    <label for="et-completion">Completion DateTime</label>
+                    <input id="et-completion" type="datetime-local" value="@completionDateInput"
+                           @onchange="e => completionDateInput = FormatDateTimeLocalValue(e.Value)" />
+                </div>
+            </div>
+
+            <div class="cd-footer d-flex justify-content-between align-items-center">
+                <button style="color: #C53030;" @onclick="DeleteAsync" disabled="@isSubmitting">
+                    <Blazicon Svg="Lucide.Trash" />
+                </button>
+                <div class="d-flex gap-2">
+                    <button class="secondary-btn" @onclick="Cancel" disabled="@isSubmitting">Cancel</button>
+                    <button class="primary-btn" @onclick="SubmitAsync" disabled="@isSubmitting">
+                        @(isSubmitting ? "Saving…" : "Save")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
-    [CascadingParameter]
-    private IMudDialogInstance MudDialog { get; set; } = default!;
-
-    [Parameter]
-    public TaskItem Task { get; set; } = new();
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public TaskItem Task { get; set; } = new();
+    [Parameter] public EventCallback<bool> OnClose { get; set; }
 
     private readonly TaskItem editModel = new();
-    private DateTime? taskDate;
-    private TimeSpan? taskTime;
+    private string taskStartInput = string.Empty;
+    private string taskEndInput = string.Empty;
+    private string completionDateInput = string.Empty;
+    private bool isSubmitting;
     private string? errorMessage;
+    private string _lastId = string.Empty;
 
-    protected override void OnInitialized()
+    protected override void OnParametersSet()
     {
-        Console.WriteLine($"Initializing EditTaskDialog with Task: {Task.Title} (ID: {Task.Id})");
+        if (!IsVisible)
+        {
+            _lastId = string.Empty;
+            return;
+        }
+
+        var currentId = Task.Id ?? string.Empty;
+        if (currentId == _lastId) return;
+
+        _lastId = currentId;
+        errorMessage = null;
 
         editModel.Id = Task.Id;
         editModel.UserId = Task.UserId;
@@ -72,65 +125,173 @@
         editModel.Title = Task.Title;
         editModel.Description = Task.Description;
         editModel.Progress = Task.Progress;
-        editModel.IsCompleted = Task.IsCompleted;
+        editModel.Priority = Math.Clamp(Task.Priority, 0, 3);
+        editModel.Status = NormalizeTaskStatus(Task.Status);
         editModel.CompletionDate = Task.CompletionDate;
-        editModel.DueDate = Task.DueDate;
+        editModel.Start = Task.Start;
+        editModel.End = Task.End;
         editModel.EntityType = Task.EntityType;
         editModel.CreatedAt = Task.CreatedAt;
         editModel.UpdatedAt = Task.UpdatedAt;
 
-        taskDate = editModel.DueDate.Date;
-        taskTime = editModel.DueDate.TimeOfDay;
+        taskStartInput = ToDateTimeLocalValue(editModel.Start);
+        taskEndInput = ToDateTimeLocalValue(editModel.End);
+        completionDateInput = editModel.CompletionDate.HasValue
+            ? ToDateTimeLocalValue(editModel.CompletionDate.Value)
+            : string.Empty;
     }
 
-    private void OnTaskDateChanged(DateTime? value)
+    private async Task SubmitAsync()
     {
-        taskDate = value;
-        editModel.DueDate = CombineDateAndTime(taskDate, taskTime);
-    }
+        if (isSubmitting) return;
 
-    private void OnTaskTimeChanged(TimeSpan? value)
-    {
-        taskTime = value;
-        editModel.DueDate = CombineDateAndTime(taskDate, taskTime);
-    }
-
-    private async System.Threading.Tasks.Task SubmitAsync()
-    {
         if (string.IsNullOrWhiteSpace(editModel.Title))
         {
             errorMessage = "Task title is required.";
             return;
         }
 
-        editModel.Progress = Math.Clamp(editModel.Progress, 0, 100);
-        editModel.DueDate = CombineDateAndTime(taskDate, taskTime);
-        editModel.CompletionDate = editModel.IsCompleted ? editModel.CompletionDate ?? DateTime.UtcNow : null;
-        editModel.UpdatedAt = DateTime.UtcNow;
+        errorMessage = null;
 
-        var updatedItem = await ItemService.UpdateItemAsync(editModel);
-
-        if (updatedItem is null)
+        try
         {
-            errorMessage = "The task could not be updated.";
-            return;
+            isSubmitting = true;
+
+            if (!TryParseDateTimeLocal(taskStartInput, out var start))
+            {
+                errorMessage = "Task start date and time is required.";
+                return;
+            }
+
+            if (!TryParseDateTimeLocal(taskEndInput, out var end))
+            {
+                errorMessage = "Task end date and time is required.";
+                return;
+            }
+
+            if (end <= start)
+            {
+                errorMessage = "Task end must be after task start.";
+                return;
+            }
+
+            DateTime? completionDate = null;
+            if (!string.IsNullOrWhiteSpace(completionDateInput))
+            {
+                if (!TryParseDateTimeLocal(completionDateInput, out var parsedCompletion))
+                {
+                    errorMessage = "Completion date and time is invalid.";
+                    return;
+                }
+
+                completionDate = parsedCompletion;
+            }
+
+            editModel.Progress = Math.Clamp(editModel.Progress, 0, 100);
+            editModel.Priority = Math.Clamp(editModel.Priority, 0, 3);
+            editModel.Status = NormalizeTaskStatus(editModel.Status);
+            editModel.Start = start;
+            editModel.End = end;
+            editModel.CompletionDate = completionDate;
+            editModel.UpdatedAt = DateTime.UtcNow;
+
+            var updatedItem = await ItemService.UpdateItemAsync(editModel);
+
+            if (updatedItem is null)
+            {
+                errorMessage = "The task could not be updated.";
+                return;
+            }
+
+            await OnClose.InvokeAsync(true);
         }
-
-        MudDialog.Close(DialogResult.Ok(true));
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
     }
 
-    private async System.Threading.Tasks.Task DeleteAsync()
+    private async Task DeleteAsync()
     {
-        await ItemService.DeleteItemAsync(editModel.Id);
-        MudDialog.Close(DialogResult.Ok(true));
+        if (isSubmitting) return;
+
+        try
+        {
+            isSubmitting = true;
+            await ItemService.DeleteItemAsync(editModel.Id);
+            await OnClose.InvokeAsync(true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
     }
 
-    private void Cancel() => MudDialog.Cancel();
+    private async Task Cancel() => await OnClose.InvokeAsync(false);
 
-    private static DateTime CombineDateAndTime(DateTime? date, TimeSpan? time)
+    private static readonly string[] DateTimeLocalFormats =
     {
-        var actualDate = (date ?? DateTime.Today).Date;
-        var actualTime = time ?? TimeSpan.Zero;
-        return actualDate.Add(actualTime);
+        "yyyy-MM-ddTHH:mm",
+        "yyyy-MM-ddTHH:mm:ss",
+        "yyyy-MM-ddTHH:mm:ss.fff",
+    };
+
+    private static string FormatDateTimeLocalValue(object? value)
+    {
+        if (value is DateTime dt)
+            return dt == default ? string.Empty : dt.ToString("yyyy-MM-ddTHH:mm");
+        var s = value?.ToString();
+        return string.IsNullOrWhiteSpace(s) ? string.Empty : s;
     }
+
+    private static bool TryParseDateTimeLocal(string? value, out DateTime parsed)
+    {
+        parsed = default;
+        if (string.IsNullOrWhiteSpace(value)) return false;
+        if (DateTime.TryParseExact(value, DateTimeLocalFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsed))
+            return true;
+        // Fallback for any other format the browser may send.
+        return DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsed);
+    }
+
+    private static string ToDateTimeLocalValue(DateTime value)
+        => value == default ? string.Empty : value.ToString("yyyy-MM-ddTHH:mm");
+
+    private static string NormalizeTaskStatus(string? status)
+    {
+        return status?.Trim() switch
+        {
+            "Not Started" => "Not Started",
+            "In Progress" => "In Progress",
+            "Completed" => "Completed",
+            "Halted" => "Halted",
+            "Hiatus" => "Hiatus",
+            _ => "Not Started"
+        };
+    }
+
+    private static readonly (int Value, string Label)[] PriorityOptions =
+    {
+        (0, "No Priority"),
+        (1, "Low Priority (Green)"),
+        (2, "Medium Priority (Yellow)"),
+        (3, "High Priority (Red)")
+    };
+
+    private static readonly string[] TaskStatusOptions =
+    {
+        "Not Started",
+        "In Progress",
+        "Completed",
+        "Halted",
+        "Hiatus"
+    };
 }

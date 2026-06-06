@@ -2,44 +2,24 @@
 @using System.Text.RegularExpressions
 @inject NoteService NoteService
 
+@* THIS IS THE NOTE EDITOR HOST, WITHIN WHICH THE TOOLBAR (EditorToolbar.razor) AND EDITOR SURFACE (TipTapEditor.razor) are embedded *@
+
 <div class="note-editor-page">
-    <div class="note-editor-topbar">
+    <div class="d-flex justify-content-between">
         <div class="note-editor-breadcrumb" aria-label="Breadcrumb">
             <span>@BreadcrumbRootLabel</span>
             <span class="note-editor-breadcrumb-sep">›</span>
             <span class="note-editor-breadcrumb-current">@BreadcrumbCurrentLabel</span>
         </div>
 
-        <div class="note-editor-actions">
+        <div class="d-flex align-items-center gap-1">
+
             @if (ShowBackButton)
             {
-                <button type="button" class="note-editor-save-btn" @onclick="CloseEditor">
-                    <span>Back</span>
-                </button>
+                <button type="button" class="primary-btn" @onclick="CloseEditor">Back</button>
             }
-            <div class="note-editor-cloud-pill" title="Saved in the selected folder">
-                <svg class="note-editor-cloud-icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M7 18h10a4 4 0 0 0 .7-7.95A5.5 5.5 0 0 0 7.2 9.7 3.8 3.8 0 0 0 7 18Z" fill="none"
-                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                </svg>
-                <span>@savePillLabel</span>
-            </div>
-            <button type="button" class="note-editor-icon-btn" aria-label="Share" title="Share">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M16 8a3 3 0 1 0-2.8-4M6 14a3 3 0 1 0 2.8 4M18 12l-12 2" fill="none" stroke="currentColor"
-                          stroke-width="2" stroke-linecap="round"></path>
-                    <path d="M18 12l-12-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                    </path>
-                </svg>
-            </button>
-            <button type="button" class="note-editor-icon-btn" aria-label="More" title="More options">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <circle cx="12" cy="5" r="1.6"></circle>
-                    <circle cx="12" cy="12" r="1.6"></circle>
-                    <circle cx="12" cy="19" r="1.6"></circle>
-                </svg>
-            </button>
-            <button type="button" class="note-editor-save-btn" @onclick="Save"
+            
+            <button type="button" class="primary-btn" @onclick="Save"
                     disabled="@isSaving">@saveButtonLabel</button>
         </div>
     </div>
@@ -48,40 +28,69 @@
         <EditorToolbar EditorId="@editorId" EditorState="@editorState" />
     </div>
 
-    <div class="note-editor-surface">
+    <div>
+
+    </div>
+
+    <div class="note-editor">
+        @* <input type="text"
+               placeholder="Title"
+               value="@Note?.Title"
+               @oninput="(e) => Note?.Title = e.Value.ToString()"
+               class="min-w-full placeholder:text-[#9ca3af] placeholder:opacity-60 p-8"
+               style="font-size: 36px; font-weight: bold; font-family: Manrope;" 
+        /> *@
+        <div class="top-line"></div>
+        <div class="editor-top">
+            <div class="mini-text">
+                @if (noteModel.CreatedAt != null)
+                {
+                    <div>@noteModel.CreatedAt.ToString("yyyy MM dd")</div>
+                }
+                else
+                {
+                    <div>@DateTime.UtcNow.ToString("yyyy MM dd")</div>
+                }
+
+            </div>
+            <input @bind="@noteModel.Title"
+                   placeholder="Enter Title"/>
+        </div>
         <TiptapEditor @key="editorId" EditorId="@editorId" InitialContent="@currentInitialHtml" OnChange="HandleChange"
                       OnStateChange="HandleStateChange" />
     </div>
 </div>
 
 @code {
+    // editor Id to uniquely identify this editor instance, for multiple editors. Passed to the EditorToolbar and TiptapEditor components, which use it to coordinate actions and state specific to this editor instance.
     private string editorId = Guid.NewGuid().ToString();
+
+    // content state from the editor, updated on every change, used to save the note content when the user clicks save
     private TiptapEditor.EditorContentChangedArgs? content;
     private TiptapEditor.EditorStateChangedArgs? editorState;
+
+    // note model being edited, Note parameter passed in is cloned to this local model to allow editing 
+    // without mutating the parent component's state until save is clicked. This also allows us to track whether we are editing an existing note (hasSavedNote) or creating a new one.
     private Note noteModel = new();
     private bool isSaving;
     private bool hasSavedNote;
     private string? loadedNoteId;
     private string? loadedFolderId;
-    private string currentInitialHtml = DefaultInitialHtml;
+
 
     [Parameter] public Note? Note { get; set; }
     [Parameter] public string? FolderId { get; set; }
     [Parameter] public bool ShowBackButton { get; set; }
     [Parameter] public string BreadcrumbRootLabel { get; set; } = "Root";
     [Parameter] public string BreadcrumbCurrentLabel { get; set; } = "New Note";
+
+    // event callbacks to notify parent component when a note is saved or when the editor is closed (e.g. back button clicked)
     [Parameter] public EventCallback<Note> OnSaved { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
 
+    // computed properties for button labels based on current state (isSaving, hasSavedNote) to provide user feedback in the UI
     private string saveButtonLabel => isSaving ? "Saving..." : hasSavedNote ? "Save Changes" : "Save";
     private string savePillLabel => hasSavedNote ? "Saved in folder" : "Draft";
-
-    private const string DefaultInitialHtml =
-        """
-        <p class="note-date"></p>
-        <h1 class="note-title"></h1>
-        <p></p>
-        """;
 
     protected override void OnParametersSet()
     {
@@ -99,7 +108,7 @@
         noteModel = Note is null ? CreateNewNote(normalizedFolderId) : CloneNote(Note);
         hasSavedNote = !string.IsNullOrWhiteSpace(noteModel.Id);
         currentInitialHtml = string.IsNullOrWhiteSpace(noteModel.Content) ? DefaultInitialHtml : noteModel.Content;
-
+        BreadcrumbCurrentLabel = hasSavedNote ? noteModel.Title : "New Note";
         content = null;
         editorState = null;
         editorId = Guid.NewGuid().ToString();
@@ -128,7 +137,7 @@
         try
         {
             noteModel.Content = content?.Html ?? currentInitialHtml;
-            noteModel.Title = ExtractTitle(noteModel.Content);
+            noteModel.Title = noteModel.Title ?? "Untitled Note";
             noteModel.FolderId = ResolveFolderForSave();
             noteModel.EntityType = "NOTE";
 
@@ -161,6 +170,7 @@
     {
         await OnClose.InvokeAsync();
     }
+
 
     private string? ResolveFolderForSave()
     {
@@ -201,33 +211,44 @@
         };
     }
 
-    private static string ExtractTitle(string html)
-    {
-        if (string.IsNullOrWhiteSpace(html))
-        {
-            return "Untitled Note";
-        }
+    // private static string ExtractTitle(string html)
+    // {
+    //     if (string.IsNullOrWhiteSpace(html))
+    //     {
+    //         return "Untitled Note";
+    //     }
 
-        var headingMatch = Regex.Match(html, "<h1[^>]*>(.*?)</h1>", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-        var heading = headingMatch.Success ? SanitizeText(headingMatch.Groups[1].Value) : string.Empty;
+    //     var headingMatch = Regex.Match(html, "<h1[^>]*>(.*?)</h1>", RegexOptions.IgnoreCase | RegexOptions.Singleline);
+    //     var heading = headingMatch.Success ? SanitizeText(headingMatch.Groups[1].Value) : string.Empty;
 
-        if (!string.IsNullOrWhiteSpace(heading))
-        {
-            return heading;
-        }
+    //     if (!string.IsNullOrWhiteSpace(heading))
+    //     {
+    //         return heading;
+    //     }
 
-        var plainText = SanitizeText(html);
-        if (string.IsNullOrWhiteSpace(plainText))
-        {
-            return "Untitled Note";
-        }
+    //     var plainText = SanitizeText(html);
+    //     if (string.IsNullOrWhiteSpace(plainText))
+    //     {
+    //         return "Untitled Note";
+    //     }
 
-        return plainText.Length <= 64 ? plainText : $"{plainText[..64].TrimEnd()}...";
-    }
+    //     return plainText.Length <= 64 ? plainText : $"{plainText[..64].TrimEnd()}...";
+    // }
+
+
 
     private static string SanitizeText(string value)
     {
         var withoutTags = Regex.Replace(value, "<.*?>", " ");
         return WebUtility.HtmlDecode(withoutTags).Trim();
     }
+
+    private string currentInitialHtml = DefaultInitialHtml;
+
+    private const string DefaultInitialHtml =
+        """
+        <p class="note-date"></p>
+        <h1 class="note-title"></h1>
+        <p></p>
+        """;
 }

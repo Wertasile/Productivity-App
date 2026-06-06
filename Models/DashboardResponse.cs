@@ -7,6 +7,8 @@ public class DashboardResponse
     // For Weekly Recap - Includes Note, Reminders and Tasks categorised in dictionary with key as day of the week.
     public Dictionary<string, WeekItem> WeekItems { get; set; } = new();
 
+    public List<Project> Projects { get; set; } = new();
+
     // For Pinned Items - Includes
     public PinnedItems PinnedItems { get; set; } = new();
 

@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Blazicons.Lucide" Version="2.2.6" />
     <PackageReference Include="Blazored.LocalStorage" Version="4.3.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.3" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.3" />
@@ -20,6 +21,13 @@
 
   <ItemGroup>
     <Folder Include="Sample Data\" />
+  </ItemGroup>
+
+  <!-- Exclude scratch console app from Blazor build -->
+  <ItemGroup>
+    <Compile Remove="JsonDeserializeTest\**\*.cs" />
+    <None Remove="JsonDeserializeTest\**\*" />
+    <Content Remove="JsonDeserializeTest\**\*" />
   </ItemGroup>
 
 </Project>

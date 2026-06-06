@@ -6,31 +6,29 @@
 @inject HttpClient Http
 @inject IDialogService DialogService
 @inject CalendarService CalendarService
+@inject ItemService ItemService
 
 <PageTitle>Calendar</PageTitle>
 
 <div class="calendar-page">
     <section class="calendar-panel">
-        <div class="calendar-panel-header">
-            <div class="calendar-heading-block">
-                <div class="eyebrow">Editorial Planner</div>
-                <div class="calendar-heading">
-                    <h1>@CurrentMonth.ToString("MMMM")</h1>
-                    <span>@CurrentMonth.Year</span>
-                </div>
+        <div class="d-flex justify-content-between ">
+            <div class="d-flex gap-1 align-items-center">
+                <h1>@CurrentMonth.ToString("MMMM") </h1>
+                <div class="sub-header"> | @CurrentMonth.Year</div>
             </div>
 
-            <div class="calendar-controls">
+            <div class="d-flex gap-1">
                 <button class="icon-button" @onclick="PrevMonthAsync" aria-label="Previous month">&#8249;</button>
                 <button class="icon-button" @onclick="NextMonthAsync" aria-label="Next month">&#8250;</button>
             </div>
         </div>
 
-        <div class="calendar-filters">
+        <div class="d-flex gap-2 align-items-center">
             <span class="chip chip-task"><span class="chip-dot"></span>Tasks</span>
+            <span class="chip chip-phase-task"><span class="chip-dot"></span>Project Task</span>
             <span class="chip chip-reminder"><span class="chip-dot"></span>Reminders</span>
             <span class="chip chip-note"><span class="chip-dot"></span>Notes</span>
-            <span class="chip chip-project"><span class="chip-dot"></span>Monthly Focus</span>
         </div>
 
         <div class="calendar-board">
@@ -43,32 +41,37 @@
                 @foreach (var day in GenerateCalendarDays())
                 {
                     var key = day.ToString("yyyy-MM-dd");
-                    var isCurrentMonth = day.Month == CurrentMonth.Month;
+                    var isCurrentMonth = day.Month == CurrentMonth.Month; @* GENERATE CURRENT MONTH*@
                     var isToday = day.Date == DateTime.Today;
                     calendarResponse.TryGetValue(key, out var item);
-                    var allEntries = GetDayEntries(item);
+
+                    var allEntries = GetDayEntries(day, item);
                     var entries = allEntries.Take(3).ToList();
                     var extraCount = Math.Max(0, allEntries.Count - entries.Count);
+
 
                     <div class="date-cell @(isCurrentMonth ? "" : "date-cell-muted") @(isToday ? "date-cell-today" : "")"
                          @onclick="() => OpenCreateDateDialogAsync(day)">
                         <div class="date-cell-header">
-                            <span class="date-number">@day.Day</span>
                             @if (isToday)
                             {
-                                <span class="today-pill">Today</span>
+                                <span class="today-pill">@day.Day</span>
+                            }
+                            else
+                            {
+                                <span class="date-number">@day.Day</span>
                             }
                         </div>
 
-                        <div class="date-event-list">
+                        <div class="date-event-list" @ondragover:preventDefault="true"
+                             @ondrop="() => OnEntryDroppedAsync(day)">
                             @foreach (var entry in entries)
                             {
                                 @if (entry.OnClick is not null)
                                 {
-                                    <button class="event-pill @entry.CssClass"
-                                            @onclick="entry.OnClick"
-                                            @onclick:stopPropagation="true"
-                                            title="@entry.Subtitle">
+                                    <button class="event-pill @entry.CssClass" draggable="true"
+                                            @ondragstart="() => OnDragStart(entry)" @onclick="entry.OnClick"
+                                            @onclick:stopPropagation="true" title="@entry.Subtitle">
                                         @entry.Title
                                     </button>
                                 }
@@ -90,41 +93,34 @@
     </section>
 
     <section class="feed-panel">
-        <div class="feed-header">
-            <div>
-                <div class="eyebrow">Curated Notes</div>
-                <h2>Monthly Feed</h2>
-            </div>
-        </div>
-
+        <h2>Monthly Feed</h2>
         <div class="feed-list">
             @foreach (var feedDay in GetFeedDays())
             {
-                <div class="feed-day">
+                <div class="d-flex flex-column gap-3">
                     <div class="feed-day-header">
-                        <span class="feed-date">@feedDay.Day.ToString("dd")</span>
+                        <h3>@feedDay.Day.ToString("dd")</h3>
                         <span class="feed-rule"></span>
-                        <span class="feed-weekday">@feedDay.Day.ToString("dddd").ToUpperInvariant()</span>
+                        <span class="lil-text">@feedDay.Day.ToString("dddd").ToUpperInvariant()</span>
                     </div>
 
-                    <div class="feed-items">
+                    <div class="d-flex flex-column gap-2">
                         @foreach (var entry in feedDay.Entries)
                         {
-                            <div class="feed-item @entry.CssClass">
-                                <div class="feed-item-icon"></div>
-                                <div class="feed-item-copy">
-                                    @if (entry.OnClick is not null)
+                            <div class="feed-item" style="cursor:@(entry.OnClick is not null ? "pointer" : "default");"
+                                 @onclick="@(entry.OnClick ?? (() => Task.CompletedTask))">
+                                <div>
+                                    @if (entry.Type == "TASK")
                                     {
-                                        <button class="feed-item-button"
-                                                @onclick="entry.OnClick">
-                                            @entry.Title
-                                        </button>
+                                        <Blazicon Svg="Lucide.Check" style="font-size:150%; color:#504BEF" />
                                     }
-                                    else
+                                    else if (entry.Type == "REMINDER")
                                     {
-                                        <h3>@entry.Title</h3>
+                                        <Blazicon Svg="Lucide.Bell" style="font-size:150%; color:#F67ADF" />
                                     }
-
+                                </div>
+                                <div class="flex flex-column gap-1">
+                                    <div class="sub-header">@entry.Title</div>
                                     @if (!string.IsNullOrWhiteSpace(entry.Subtitle))
                                     {
                                         <p>@entry.Subtitle</p>
@@ -139,43 +135,34 @@
     </section>
 </div>
 
+<CreateCalendarItemDialog IsVisible="@createDialogVisible" SelectedDate="@createDialogDate"
+                          OnClose="OnCreateDialogClosedAsync" />
+
+<EditTaskDialog IsVisible="@editTaskVisible" Task="@currentEditTask" OnClose="OnEditTaskClosedAsync" />
+
+<EditReminderDialog IsVisible="@editReminderVisible" Reminder="@currentEditReminder"
+                    OnClose="OnEditReminderClosedAsync" />
+
 @code {
     public DateTime CurrentMonth = DateTime.Now;
     private CalendarResponse calendarResponse = new();
 
+    private int monthOffset = 0;
+    private bool createDialogVisible;
+    private DateTime createDialogDate;
+
+    private bool editTaskVisible;
+    private TaskItem currentEditTask = new();
+    private bool editReminderVisible;
+    private Reminder currentEditReminder = new();
+    private List<TaskItem> monthTasks = new();
+
     public List<string> DayHeaders = new() { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+
+    private DraggedCalendarItem? draggedItem;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadCalendarAsync();
-    }
-
-    private async Task OpenCreateDateDialogAsync(DateTime selectedDate)
-    {
-        var options = new DialogOptions
-        {
-            CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Small,
-            FullWidth = true
-        };
-
-        var parameters = new DialogParameters
-        {
-            { "SelectedDate", selectedDate.Date }
-        };
-
-        var dialog = await DialogService.ShowAsync<CreateCalendarItemDialog>(
-            $"Add item for {selectedDate:dd MMM}",
-            parameters,
-            options);
-
-        var result = await dialog.Result;
-
-        if (result is null || result.Canceled || result.Data is not BaseItem)
-        {
-            return;
-        }
-
         await LoadCalendarAsync();
     }
 
@@ -183,58 +170,92 @@
     {
         try
         {
-            calendarResponse = await CalendarService.GetMonthAsync(CurrentMonth);
+            calendarResponse = await CalendarService.GetMonthAsync(CurrentMonth, monthOffset);
+            monthTasks = calendarResponse
+                .SelectMany(kv => kv.Value.Tasks)
+                .Where(task => !string.IsNullOrWhiteSpace(task.Id))
+                .GroupBy(task => task.Id)
+                .Select(group => group.First())
+                .ToList();
+
+            Console.WriteLine($"[Calendar] Response has {calendarResponse.Count} day entries.");
+
+            var totalTasks = calendarResponse.Sum(kv => kv.Value.Tasks.Count);
+            var totalReminders = calendarResponse.Sum(kv => kv.Value.Reminders.Count);
+            Console.WriteLine($"[Calendar] Totals → Tasks: {totalTasks}, Reminders: {totalReminders}");
+
+            // Dictionary enumeration order is not meaningful here, so sample non-empty days first.
+            foreach (var kv in calendarResponse
+                         .Where(kv => kv.Value.Tasks.Count > 0 || kv.Value.Reminders.Count > 0)
+                         .Take(5))
+            {
+                Console.WriteLine($"[Calendar] Non-empty '{kv.Key}' → Tasks: {kv.Value.Tasks.Count}, Reminders: {kv.Value.Reminders.Count}");
+            }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            calendarResponse = await Http.GetFromJsonAsync<CalendarResponse>("sample-data/SampleCalendarResponse.json")
-                ?? new CalendarResponse();
+            Console.WriteLine($"[Calendar] Error loading: {ex.GetType().Name}: {ex.Message}");
         }
     }
 
-    private async Task OpenTaskAsync(TaskItem task)
+    private void OnCreateDialogClosedAsync()
     {
-        var options = new DialogOptions { CloseOnEscapeKey = true };
-        var parameters = new DialogParameters
-        {
-            { "Task", task }
-        };
+        createDialogVisible = false;
+    }
 
-        var dialog = await DialogService.ShowAsync<EditTaskDialog>("Edit Task", parameters, options);
-        var result = await dialog.Result;
+    private void OpenCreateDateDialogAsync(DateTime selectedDate)
+    {
+        createDialogDate = selectedDate.Date;
+        createDialogVisible = true;
+    }
 
-        if (result is not null && !result.Canceled)
+    private async Task OnCreateDialogClosedAsync(BaseItem? result)
+    {
+        createDialogVisible = false;
+
+        if (result is not null)
         {
             await LoadCalendarAsync();
         }
     }
 
-    private async Task OpenReminderAsync(Reminder reminder)
+    private Task OpenTaskAsync(TaskItem task)
     {
-        var options = new DialogOptions { CloseOnEscapeKey = true };
-        var parameters = new DialogParameters
-        {
-            { "Reminder", reminder }
-        };
+        currentEditTask = task;
+        editTaskVisible = true;
+        return Task.CompletedTask;
+    }
 
-        var dialog = await DialogService.ShowAsync<EditReminderDialog>("Edit Reminder", parameters, options);
-        var result = await dialog.Result;
+    private Task OpenReminderAsync(Reminder reminder)
+    {
+        currentEditReminder = reminder;
+        editReminderVisible = true;
+        return Task.CompletedTask;
+    }
 
-        if (result is not null && !result.Canceled)
-        {
-            await LoadCalendarAsync();
-        }
+    private async Task OnEditTaskClosedAsync(bool success)
+    {
+        editTaskVisible = false;
+        if (success) await LoadCalendarAsync();
+    }
+
+    private async Task OnEditReminderClosedAsync(bool success)
+    {
+        editReminderVisible = false;
+        if (success) await LoadCalendarAsync();
     }
 
     public async Task PrevMonthAsync()
     {
         CurrentMonth = CurrentMonth.AddMonths(-1);
+        monthOffset--;
         await LoadCalendarAsync();
     }
 
     public async Task NextMonthAsync()
     {
         CurrentMonth = CurrentMonth.AddMonths(1);
+        monthOffset++;
         await LoadCalendarAsync();
     }
 
@@ -253,32 +274,72 @@
         return days;
     }
 
-    private List<CalendarEntryViewModel> GetDayEntries(CalendarItem? item)
+    private List<CalendarEntryViewModel> GetDayEntries(DateTime day, CalendarItem? item)
     {
         var entries = new List<CalendarEntryViewModel>();
 
-        if (item is null)
+        var dayTasks = monthTasks
+            .Where(task => DoesTaskSpanDate(task, day))
+            .ToList();
+
+        if (item is not null)
         {
-            return entries;
+            // Keep day-specific tasks from API even when Start/End is missing.
+            foreach (var task in item.Tasks)
+            {
+                if (dayTasks.All(x => x.Id != task.Id))
+                {
+                    dayTasks.Add(task);
+                }
+            }
         }
 
-        entries.AddRange(item.Tasks.Select(task => new CalendarEntryViewModel(
-            task.Title,
-            string.IsNullOrWhiteSpace(task.Description) ? $"Due {task.DueDate:h:mm tt}" : task.Description,
-            "event-pill-task",
-            () => OpenTaskAsync(task))));
+        entries.AddRange(dayTasks.Select(task =>
+        {
+            var (start, end) = GetTaskRange(task);
 
-        entries.AddRange(item.Reminders.Select(reminder => new CalendarEntryViewModel(
-            reminder.Name,
-            string.IsNullOrWhiteSpace(reminder.Description) ? $"Reminder at {reminder.ReminderDate:h:mm tt}" : reminder.Description,
-            "event-pill-reminder",
-            () => OpenReminderAsync(reminder))));
+            var displayTime =
+                $"{start:h:mm tt}-{end:h:mm tt}";
 
-        entries.AddRange(item.Notes.Select(note => new CalendarEntryViewModel(
-            note.Title,
-            GetNotePreview(note.Content),
-            "event-pill-note",
-            null)));
+            var subtitle = string.IsNullOrWhiteSpace(task.Description)
+                ? $"{task.Status} • {GetPriorityLabel(task.Priority)} • {displayTime}"
+                : task.Description;
+
+            return new CalendarEntryViewModel(
+                task.Id,
+                "TASK",
+                task.Title,
+                subtitle,
+                "event-pill-task",
+                start,
+                () => OpenTaskAsync(task)
+            );
+        }));
+
+        if (item is not null)
+        {
+            entries.AddRange(item.Reminders.Select(reminder =>
+            {
+                var reminderTime =
+                    reminder.ReminderDateTime != default
+                        ? reminder.ReminderDateTime
+                        : DateTime.Now;
+
+                var subtitle = string.IsNullOrWhiteSpace(reminder.Description)
+                    ? $"{GetPriorityLabel(reminder.Priority)} • Reminder at {reminderTime:h:mm tt}"
+                    : reminder.Description;
+
+                return new CalendarEntryViewModel(
+                    reminder.Id,
+                    "REMINDER",
+                    reminder.Name,
+                    subtitle,
+                    "event-pill-reminder",
+                    reminderTime,
+                    () => OpenReminderAsync(reminder)
+                );
+            }));
+        }
 
         return entries;
     }
@@ -287,9 +348,135 @@
     {
         return Enumerable.Range(1, DateTime.DaysInMonth(CurrentMonth.Year, CurrentMonth.Month))
             .Select(day => new DateTime(CurrentMonth.Year, CurrentMonth.Month, day))
-            .Select(date => new FeedDayViewModel(date, GetDayEntries(calendarResponse.GetValueOrDefault(date.ToString("yyyy-MM-dd")))))
+            .Select(date => new FeedDayViewModel(date, GetDayEntries(date,
+calendarResponse.GetValueOrDefault(date.ToString("yyyy-MM-dd")))))
             .Where(feedDay => feedDay.Entries.Count > 0)
-            .Take(6);
+            .Take(10);
+    }
+
+    private static (DateTime Start, DateTime End) GetTaskRange(TaskItem task)
+    {
+        var start = task.Start != default ? task.Start : task.End;
+        var end = task.End != default ? task.End : task.Start;
+
+        if (start == default && end == default)
+        {
+            start = DateTime.Today;
+            end = DateTime.Today;
+        }
+
+        if (end < start)
+        {
+            (start, end) = (end, start);
+        }
+
+        return (start, end);
+    }
+
+    private static bool DoesTaskSpanDate(TaskItem task, DateTime day)
+    {
+        var (start, end) = GetTaskRange(task);
+        return day.Date >= start.Date && day.Date <= end.Date;
+    }
+
+    private Task OnDragStart(CalendarEntryViewModel entry)
+    {
+        draggedItem = new DraggedCalendarItem
+        {
+            Id = entry.Id,
+            Type = entry.Type,
+            OriginalDate = entry.Date
+        };
+
+        return Task.CompletedTask;
+    }
+
+    private async Task OnEntryDroppedAsync(DateTime targetDate)
+    {
+        if (draggedItem is null)
+        {
+            return;
+        }
+
+        var source = draggedItem;
+        draggedItem = null;
+
+        var original = source.OriginalDate;
+
+        var newDateTime = new DateTime(
+            targetDate.Year,
+            targetDate.Month,
+            targetDate.Day,
+            original.Hour,
+            original.Minute,
+            original.Second
+        );
+
+        BaseItem? updatedItem = null;
+
+        if (source.Type == "TASK")
+        {
+            var task = calendarResponse
+                .SelectMany(x => x.Value.Tasks)
+                .FirstOrDefault(t => t.Id == source.Id);
+
+            if (task is null) return;
+
+            var duration = task.End - task.Start;
+            if (duration <= TimeSpan.Zero)
+            {
+                duration = TimeSpan.FromHours(1);
+            }
+
+            var newStart = newDateTime;
+            var newEnd = newStart.Add(duration);
+
+            updatedItem = new TaskItem
+            {
+                Id = task.Id,
+                UserId = task.UserId,
+                parentTaskId = task.parentTaskId,
+                Title = task.Title,
+                Description = task.Description,
+                Progress = task.Progress,
+                Priority = task.Priority,
+                Status = task.Status,
+                CompletionDate = task.CompletionDate,
+                Start = newStart,
+                End = newEnd,
+                CreatedAt = task.CreatedAt,
+                UpdatedAt = DateTime.UtcNow,
+                EntityType = task.EntityType
+            };
+        }
+        else if (source.Type == "REMINDER")
+        {
+            var reminder = calendarResponse
+                .SelectMany(x => x.Value.Reminders)
+                .FirstOrDefault(r => r.Id == source.Id);
+
+            if (reminder is null) return;
+
+            updatedItem = new Reminder
+            {
+                Id = reminder.Id,
+                UserId = reminder.UserId,
+                Name = reminder.Name,
+                Description = reminder.Description,
+                IsAcknowledged = reminder.IsAcknowledged,
+                Priority = reminder.Priority,
+                ReminderDateTime = newDateTime,
+                CreatedAt = reminder.CreatedAt,
+                UpdatedAt = DateTime.UtcNow,
+                EntityType = reminder.EntityType
+            };
+        }
+
+        if (updatedItem is not null)
+        {
+            await ItemService.UpdateItemAsync(updatedItem);
+            await LoadCalendarAsync();
+        }
     }
 
     private static string GetNotePreview(string? content)
@@ -303,7 +490,33 @@
         return content.Length <= maxLength ? content : $"{content[..maxLength].Trim()}...";
     }
 
-    private sealed record CalendarEntryViewModel(string Title, string Subtitle, string CssClass, Func<Task>? OnClick);
+    private static string GetPriorityLabel(int priority)
+    {
+        return Math.Clamp(priority, 0, 3) switch
+        {
+            1 => "Low Priority",
+            2 => "Medium Priority",
+            3 => "High Priority",
+            _ => "No Priority"
+        };
+    }
+
+    private sealed record CalendarEntryViewModel(
+        string Id,
+        string Type,
+        string Title,
+        string Subtitle,
+        string CssClass,
+        DateTime Date,
+        Func<Task>? OnClick
+    );
+
+    public class DraggedCalendarItem
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty; // "TASK" or "REMINDER"
+        public DateTime OriginalDate { get; set; }
+    }
 
     private sealed record FeedDayViewModel(DateTime Day, List<CalendarEntryViewModel> Entries);
 }

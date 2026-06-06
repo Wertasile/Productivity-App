@@ -1,0 +1,134 @@
+@page "/projects"
+@using Microsoft.AspNetCore.Authorization
+@layout MainLayout
+@attribute [Authorize]
+@inject ProjectService ProjectService
+@inject NavigationManager NavigationManager
+
+<div class="projects-page">
+
+
+    <div class="d-flex justify-content-between">
+        <h1 class="m-0">Projects</h1>
+        <div class="d-flex gap-1">
+            <button type="button"
+                class="icon-btn-project icon-btn"
+                aria-label="Create task"
+                title="Create task"
+                @onclick='() => OpenCreateDialogAsync()'>
+                <div style="font-size: 150%;">
+                    <Blazicon Svg="Lucide.Plus" />
+                </div>
+            </button>
+        </div>
+    </div>
+
+
+    <div class="d-flex flex-column gap-3 p-4">
+        @if (projects.Count == 0)
+        {
+            <p>Loading projects...</p>
+        }
+        else
+        {
+            @foreach (var project in projects)
+            {
+                <div class="project" @onclick='() => NavigationManager.NavigateTo($"/projects/{project.Id}")'>
+                    <div class="d-flex justify-content-between w-100 align-items-center">
+                        <div class="d-flex flex-column gap-1 ">
+                            <div class="sub-header">@project.Name</div>
+                            <div class="mini-text">
+                                @if (project.Phases == null || project.Phases.Count() == 0)
+                                {
+                                    <text>No Phases</text>
+                                }
+                                else if (project.Phases.Count() == 1)
+                                {
+                                    <text>1 Phase</text>
+                                }
+                                else
+                                {
+                                    <text>@project.Phases.Count() Phases</text>
+                                }
+                            </div>
+                        </div>
+                        <div class="project-days-left">
+                            <div class="mini-text">35 DAYS LEFT</div>
+                            <div class="sub-header">@project.Start.ToString("dd MMM") - @project.End.ToString("dd MMM yyyy")</div>
+                        </div>
+                    </div>
+                    
+                    <i class="std-text">@GetPreview(project.Description)</i>
+
+                    <div>
+                        @if (project.Phases != null && project.Phases.Count() > 0)
+                        {
+                            <div class="d-flex flex-column gap-2 mt-2">
+                                @foreach (var phase in project.Phases.Take(2))
+                                {
+                                    <div class="phase">
+                                        <div class="d-flex justify-content-between">
+                                            <div class="sub-header">@phase.Name</div>
+                                            <div class="mini-text">@phase.Start.ToString("dd MMM") - @phase.End.ToString("dd MMM yyyy")</div>
+                                        </div>
+                                        <div class="std-text">@GetPreview(phase.Description)</div>
+                                    </div>
+                                }
+                            </div>    
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+</div>
+
+<ProjectDialog IsVisible="@createDialogVisible" OnClose="OnCreateDialogClosedAsync" />
+@code {
+    private List<Project> projects = new();
+    private bool createDialogVisible = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProjectsAsync();
+    }
+    
+    private async Task LoadProjectsAsync()
+    {
+        projects = await ProjectService.GetProjectsAsync();
+        StateHasChanged();
+    }
+
+    private void OpenCreateDialogAsync()
+    {
+        // Implement dialog opening logic here
+        Console.WriteLine($"Open create dialog for");
+        createDialogVisible = true;
+    }
+
+    private async Task OnCreateDialogClosedAsync()
+    {
+        createDialogVisible = false;
+        await LoadProjectsAsync();
+    }
+
+    private static string GetPreview(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return "Click to open";
+        }
+
+        var plainText = System.Text.RegularExpressions.Regex.Replace(content, "<.*?>", string.Empty).Trim();
+
+        if (string.IsNullOrWhiteSpace(plainText))
+        {
+            return "Click to open";
+        }
+
+        const int maxLength = 140;
+        return plainText.Length <= maxLength ? plainText : $"{plainText[..maxLength].Trim()}...";
+    }
+
+}

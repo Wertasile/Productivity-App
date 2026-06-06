@@ -1,0 +1,69 @@
+.journal-page {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    background-color: #FEFCF1;
+    justify-content: center;
+    /* overflow: hidden; */
+}
+
+.date-scroll {
+    display: flex;
+    background: #FBFAEC;
+    box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.05);
+    border-radius: 24px;
+    padding: 8px 16px;
+    cursor: pointer;
+    height: 80px;
+    width: 418.99px;
+}
+
+.date-item { 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 12px;
+}
+
+    .date-item.selected {
+        background: #EAE4B1;
+        border-radius: 16px;
+        font-weight: bold;
+    }
+
+/* Editor area fills remaining height */
+.note-editor {
+    flex: 1;
+    min-height: fit-content;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Stretch the TiptapEditor wrapper and ProseMirror host to fill */
+::deep .editor-wrapper {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+::deep .editor-host {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+::deep .editor-host > .tiptap {
+    flex: 1;
+}
+
+::deep .ProseMirror {
+    flex: 1;
+    min-height: 100%;
+}
+
+

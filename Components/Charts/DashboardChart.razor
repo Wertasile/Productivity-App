@@ -1,0 +1,67 @@
+﻿@using MudBlazor.Charts;
+
+
+<MudPaper Class="mud-paper">
+    <MudChart ChartType="ChartType.Line" ChartSeries="@_series" ChartLabels="@xAxisDays" ChartOptions="@_options" Width="100%" Height="@($"{_height}px")"
+              @bind-SelectedIndex="_index" MatchBoundsToSize="_matchBoundsToSize" />
+</MudPaper>
+
+@code {
+
+    [Parameter]
+    public double[] TasksCount { get; set; } = new double[7] ;
+    [Parameter]
+    public double[] RemindersCount { get; set; } = new double[7] ;
+
+    private string[] xAxisDays = new string[7];
+    private int _index = -1; //default value cannot be 0 -> first selectedindex is 0.
+    private LineChartOptions _options = new LineChartOptions()
+    {
+        XAxisTitle = "Days",
+        YAxisTitle = "Sales",
+        ShowDataMarkers = true,
+        ChartPalette = new string[] { "#504BEF", "#F67ADF" },
+        ShowToolTips = true,
+        InterpolationOption = InterpolationOption.NaturalSpline,
+        YAxisTicks = 1,
+        
+    };
+
+    private int _height = 350;
+    private bool _matchBoundsToSize = false;
+
+    private List<ChartSeries<double>> _series = new();
+
+    protected override void OnParametersSet()
+    {
+        _series = new List<ChartSeries<double>>()
+        {
+            new ChartSeries<double>() { Name = "Tasks", Data = TasksCount },
+            new ChartSeries<double>() { Name = "Reminders", Data = RemindersCount },
+        };
+
+        _options.SeriesDisplayOverrides = new Dictionary<IChartSeries, SeriesDisplayOverride>()
+        {
+            { _series[0], new SeriesDisplayOverride() },
+            { _series[1], new SeriesDisplayOverride() }
+        };
+    }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        
+        var today = DateTime.Today;
+        var startOfWeek = today.AddDays(-(int)today.DayOfWeek);
+        var dayLabels = new[] { "MO", "TU", "WE", "TH", "FR", "SA", "SU" };
+                    
+        for (int i = 0; i < 7; i++){            
+            var dayDate = startOfWeek.AddDays(i);
+            var isToday = dayDate.Date == today;
+            xAxisDays[i] = @dayLabels[i] + dayDate.Day;
+        }
+                
+
+    }
+}

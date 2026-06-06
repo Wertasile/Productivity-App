@@ -219,7 +219,7 @@ public class AuthService
     }
 
     
-    public async Task ForgotPasswordAsync(string email)
+    public async Task<AuthResult> ForgotPasswordAsync(string email)
     {
         var request = CreateRequest(
             "AWSCognitoIdentityProviderService.ForgotPassword",
@@ -229,10 +229,15 @@ public class AuthService
                 Username = email
             });
 
-        await _httpClient.SendAsync(request);
+        var response = await _httpClient.SendAsync(request);
+
+        if (!response.IsSuccessStatusCode)
+            return new AuthResult { Success = false, ErrorMessage = "Could not send reset code. Please check your email address." };
+
+        return new AuthResult { Success = true };
     }
 
-    public async Task ConfirmForgotPasswordAsync(string email,string code,string newPassword)
+    public async Task<AuthResult> ConfirmForgotPasswordAsync(string email, string code, string newPassword)
     {
         var request = CreateRequest(
             "AWSCognitoIdentityProviderService.ConfirmForgotPassword",
@@ -244,7 +249,12 @@ public class AuthService
                 Password = newPassword
             });
 
-        await _httpClient.SendAsync(request);
+        var response = await _httpClient.SendAsync(request);
+
+        if (!response.IsSuccessStatusCode)
+            return new AuthResult { Success = false, ErrorMessage = "Invalid or expired reset code. Please try again." };
+
+        return new AuthResult { Success = true };
     }
 
     public async Task LogoutAsync()

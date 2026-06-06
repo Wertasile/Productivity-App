@@ -16,7 +16,7 @@ public class DayResponse
 
     public List<Reminder> Reminders { get; set; }
 
-    public List<Task> Tasks { get; set; }
+    public List<TaskItem> Tasks { get; set; }
 }
 
 public class CalendarItem

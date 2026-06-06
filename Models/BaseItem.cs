@@ -13,7 +13,7 @@ public abstract class BaseItem
 
     // DateTimeOFFSET Because your backend includes timezone (Z = UTC).
     public DateTimeOffset CreatedAt { get; set; }
-
+    
     public DateTimeOffset UpdatedAt { get; set; }
 }
 

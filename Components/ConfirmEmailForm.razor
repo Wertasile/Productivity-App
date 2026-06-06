@@ -1,43 +1,146 @@
-﻿@inject NavigationManager Navigation
-@* @inject AuthService AuthService *@
+﻿@inject AuthService AuthService
+@inject NavigationManager Navigation
 
-<EditForm Model="@confirmEmailModel" OnValidSubmit="@HandleValidSubmit">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
-
-    <div>
-        <label>Email</label>
-        <InputText @bind-Value="confirmEmailModel.Email" placeholder="Enter email again" />
+<div class="auth-form-container">
+    <div class="auth-back-row">
+        <button type="button" class="auth-link-muted" @onclick="() => OnSwitch.InvokeAsync(AuthState.Login)">
+            ← Back to sign in
+        </button>
     </div>
 
-   <div>
-       <label>Code</label>
-        <InputText @bind-Value="confirmEmailModel.Code" placeholder="Enter code from email" />
-   </div>
+    <h2 class="auth-form-title">Check your email</h2>
+    <p class="auth-form-subtitle">
+        We sent a verification code to <strong>@(string.IsNullOrWhiteSpace(Email) ? "your email" : Email)</strong>.
+        Enter it below to confirm your account.
+    </p>
 
-    <button type="submit">Verify Email</button>
-</EditForm>
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="auth-error">
+            <span>⚠</span>
+            <span>@errorMessage</span>
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(successMessage))
+    {
+        <div class="auth-success">
+            <span>✓</span>
+            <span>@successMessage</span>
+        </div>
+    }
+
+    <EditForm Model="@confirmModel" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+
+        @if (string.IsNullOrWhiteSpace(Email))
+        {
+            <div class="auth-input-group">
+                <label class="auth-input-label">Email</label>
+                <InputText @bind-Value="confirmModel.Email"
+                           class="auth-input"
+                           placeholder="you@example.com"
+                           type="email"
+                           autocomplete="email" />
+                <ValidationMessage For="() => confirmModel.Email" />
+            </div>
+        }
+
+        <div class="auth-input-group" style="margin-bottom:1.5rem;">
+            <label class="auth-input-label">Verification Code</label>
+            <InputText @bind-Value="confirmModel.Code"
+                       class="auth-input"
+                       placeholder="6-digit code"
+                       maxlength="6"
+                       autocomplete="one-time-code"
+                       style="letter-spacing:0.2em; font-size:1.1rem;" />
+            <div class="auth-code-hint">Check your spam folder if you don't see it.</div>
+            <ValidationMessage For="() => confirmModel.Code" />
+        </div>
+
+        <button type="submit" class="auth-submit-btn" disabled="@isLoading">
+            @if (isLoading)
+            {
+                <span class="auth-spinner"></span>
+            }
+            Verify Email
+        </button>
+    </EditForm>
+
+    <p class="auth-helper-text" style="margin-top:1.25rem;">
+        Didn't receive a code?&nbsp;
+        <button type="button" class="auth-link" @onclick="ResendCodeAsync" disabled="@isResending">
+            @(isResending ? "Sending…" : "Resend code")
+        </button>
+    </p>
+</div>
 
 @code {
-    private ConfirmEmailModel confirmEmailModel = new();
+    [Parameter] public EventCallback<AuthState> OnSwitch { get; set; }
+    [Parameter] public string? Email { get; set; }
+
+    private ConfirmEmailModel confirmModel = new();
+    private string? errorMessage;
+    private string? successMessage;
+    private bool isLoading;
+    private bool isResending;
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrWhiteSpace(Email))
+            confirmModel.Email = Email;
+    }
 
     private async Task HandleValidSubmit()
     {
-        // var response = await AuthService.ConfirmEmailAsync(confirmEmailModel.Email , confirmEmailModel.Code);
-        // if (response.Success)
-        // {
-        //     Navigation.NavigateTo("/login");
-        // }
-        // else
-        // {
-           
-        // }
+        errorMessage = null;
+        isLoading = true;
+        try
+        {
+            var result = await AuthService.ConfirmEmailAsync(confirmModel.Email, confirmModel.Code);
+            if (result.Success)
+                await OnSwitch.InvokeAsync(AuthState.Login);
+            else
+                errorMessage = result.ErrorMessage ?? "Verification failed. Please try again.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ResendCodeAsync()
+    {
+        errorMessage = null;
+        successMessage = null;
+        isResending = true;
+        try
+        {
+            await AuthService.ResendConfirmationAsync(confirmModel.Email);
+            successMessage = "A new code has been sent to your email.";
+        }
+        catch
+        {
+            errorMessage = "Could not resend code. Please try again.";
+        }
+        finally
+        {
+            isResending = false;
+        }
     }
 
     private class ConfirmEmailModel
     {
-        public string Email { get; set; }
-        public string Code { get; set; }
-    }
+        [Required(ErrorMessage = "Email is required.")]
+        [EmailAddress(ErrorMessage = "Enter a valid email address.")]
+        public string Email { get; set; } = string.Empty;
 
+        [Required(ErrorMessage = "Verification code is required.")]
+        [MinLength(6, ErrorMessage = "Enter the full 6-digit code.")]
+        public string Code { get; set; } = string.Empty;
+    }
 }

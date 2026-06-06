@@ -8,6 +8,8 @@
     --calendar-muted: #aca58c;
     --calendar-task: #504bef;
     --calendar-task-bg: rgba(80, 75, 239, 0.2);
+    --calendar-phase-task: #FFB249;
+    --calendar-phase-task-bg: rgba(255, 178, 73, 0.2);
     --calendar-reminder: #f67adf;
     --calendar-reminder-bg: rgba(246, 122, 223, 0.2);
     --calendar-note: #69663c;
@@ -15,106 +17,46 @@
     --calendar-project-bg: #f2e8bf;
     display: grid;
     grid-template-columns: minmax(0, 2.6fr) minmax(320px, 0.95fr);
-    gap: 1.75rem;
     align-items: start;
     color: var(--calendar-text);
 }
 
 .calendar-panel {
-    background:
-        radial-gradient(circle at top left, rgba(255, 255, 255, 0.78), transparent 26%),
-        var(--calendar-panel);
     border: 1px solid rgba(112, 101, 61, 0.08);
-    border-radius: 34px;
     padding: 2rem;
-    box-shadow: 0 24px 64px rgba(95, 87, 55, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
 }
 
 .feed-panel {
     background: var(--calendar-side);
-    border-radius: 0;
     min-height: calc(100vh - 4rem);
+    height: 100%;
     padding: 2.25rem 2rem;
     border-left: 1px solid rgba(112, 101, 61, 0.08);
-}
-
-.calendar-panel-header,
-.feed-header {
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 1rem;
+    flex-direction: column;
+    gap: 1.75rem;
 }
 
 .calendar-panel-header {
     margin-bottom: 1.75rem;
 }
 
-.calendar-heading-block {
-    display: grid;
-    gap: 0.55rem;
-}
-
-.eyebrow {
-    text-transform: uppercase;
-    letter-spacing: 0.24em;
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: var(--calendar-muted);
-}
-
-.calendar-heading {
-    display: flex;
-    align-items: baseline;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-
-.calendar-heading h1,
-.feed-header h2,
-.date-number {
-    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
-}
-
-.calendar-heading h1 {
-    margin: 0;
-    font-size: clamp(2.8rem, 5vw, 4.6rem);
-    font-weight: 700;
-    line-height: 0.95;
-    color: #303124;
-}
-
-.calendar-heading span {
-    color: #bdb49e;
-    font-size: clamp(1.55rem, 2vw, 2.35rem);
-    font-style: italic;
-    font-weight: 500;
-}
-
-.calendar-controls {
-    display: flex;
-    gap: 0.6rem;
-    padding-top: 0.25rem;
-}
-
-.calendar-filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    margin-bottom: 1.5rem;
-}
+/* ------------------- CHIPS ---------------------------------------------------------------------------- */
 
 .chip {
     display: inline-flex;
     align-items: center;
-    gap: 0.65rem;
+    gap: 8px;
     border-radius: 999px;
-    padding: 0.6rem 1rem;
+    padding: 04px 12px;
     border: 1px solid transparent;
-    font-size: 0.82rem;
-    font-weight: 800;
+    font-size: 12px;
+    font-weight: 400;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.6px;
 }
 
 .chip-dot {
@@ -128,6 +70,12 @@
     color: var(--calendar-task);
     background: var(--calendar-task-bg);
     border-color: rgba(80, 75, 239, 0.2);
+}
+
+.chip-phase-task {
+    color: var(--calendar-phase-task);
+    background: var(--calendar-phase-task-bg);
+    border-color: rgba(255, 178, 73, 0.2);
 }
 
 .chip-reminder {
@@ -148,9 +96,10 @@
     border-color: rgba(140, 127, 57, 0.2);
 }
 
+/* ------------------- CALENDAR GRID ----------------------------------------------------------------------- */
+
 .calendar-board {
     border: 1px solid rgba(112, 101, 61, 0.08);
-    border-radius: 22px;
     overflow: hidden;
     background: rgba(255, 253, 247, 0.72);
 }
@@ -161,7 +110,7 @@
 }
 
 .weekday {
-    min-height: 3.25rem;
+    min-height: 2rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -177,7 +126,7 @@
 }
 
 .date-cell {
-    min-height: 180px;
+    min-height: 150px;
     padding: 0.95rem 0.75rem 0.9rem;
     background: rgba(255, 255, 255, 0.46);
     border-right: 1px solid rgba(112, 101, 61, 0.07);
@@ -190,7 +139,8 @@
 }
 
 .date-cell:hover {
-    background: rgba(255, 255, 255, 0.72);
+    background: rgba(220, 215, 215, 0.72);
+    font-weight: 800;
 }
 
 .date-cell-muted {
@@ -202,33 +152,30 @@
     box-shadow: inset 0 0 0 1px rgba(112, 101, 61, 0.18);
 }
 
-.date-cell-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-}
 
 .date-number {
     font-size: 18px;
     font-weight: 400;
     color: #646557;
     line-height: 28px;
+    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
 }
 
 .date-cell-muted .date-number {
     color: #c7c0ab;
+    font-style: italic;
 }
 
 .today-pill {
     border-radius: 999px;
-    padding: 0.22rem 0.55rem;
-    background: rgba(112, 101, 61, 0.1);
-    color: #6f6847;
-    font-size: 0.7rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    padding: 4px;
+    color: white;
+    background: #6f6847;
+    font-size: 18px;
+    font-weight: 400;
+    line-height: 28px;
+    width: 100%;
+    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
 }
 
 .date-event-list {
@@ -268,6 +215,11 @@ button.event-pill {
     background: var(--calendar-reminder-bg);
 }
 
+.event-pill-phase-task {
+    color: var(--calendar-phase-task);
+    background: var(--calendar-phase-task-bg);
+}
+
 .event-pill-note {
     color: var(--calendar-note);
     background: var(--calendar-note-bg);
@@ -280,27 +232,10 @@ button.event-pill {
     font-weight: 600;
 }
 
-.feed-header {
-    margin-bottom: 1.6rem;
-}
-
-.feed-header h2 {
-    margin: 0.15rem 0 0;
-    font-size: clamp(2rem, 2.8vw, 2.8rem);
-    font-weight: 700;
-    color: #313225;
-}
-
-
-
 .feed-list {
-    display: grid;
-    gap: 1.8rem;
-}
-
-.feed-day {
-    display: grid;
-    gap: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
 }
 
 .feed-day-header {
@@ -310,40 +245,30 @@ button.event-pill {
     align-items: center;
 }
 
-.feed-date {
-    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
-    font-size: 20px;
-    font-weight: 500;
-    color: #646557;
-}
-
 .feed-rule {
     height: 1px;
     background: rgba(112, 101, 61, 0.14);
 }
 
-.feed-weekday {
-    font-size: 0.82rem;
-    font-weight: 800;
-    color: #b2aa8f;
-    letter-spacing: 0.16em;
-}
-
-.feed-items {
-    display: grid;
-    gap: 0.95rem;
-}
-
 .feed-item {
-    display: grid;
-    grid-template-columns: auto 1fr;
+    display: flex;
     gap: 0.9rem;
-    align-items: start;
-    background: rgba(255, 255, 255, 0.85);
-    border-radius: 24px;
-    padding: 1.15rem 1.15rem 1.1rem;
-    border: 1px solid rgba(112, 101, 61, 0.06);
-    box-shadow: 0 16px 30px rgba(95, 87, 55, 0.05);
+    background-color: white;
+    border-radius: 12px;
+    padding: 16px;
+    box-sizing: border-box;
+
+    /* Auto layout */
+    border: 1px solid rgba(186, 186, 169, 0.1);
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.02);
+    border-radius: 12px;
+
+    /* Inside auto layout */
+    flex: none;
+    order: 0;
+    align-self: stretch;
+    flex-grow: 0;
+
 }
 
 .feed-item-icon {
@@ -354,33 +279,6 @@ button.event-pill {
     background: currentColor;
 }
 
-.feed-item-copy {
-    display: grid;
-    gap: 0.35rem;
-}
-
-.feed-item-copy h3,
-.feed-item-button {
-    margin: 0;
-    font-size: 1.05rem;
-    font-weight: 800;
-    color: inherit;
-}
-
-.feed-item-button {
-    border: none;
-    background: transparent;
-    padding: 0;
-    text-align: left;
-    cursor: pointer;
-}
-
-.feed-item-copy p {
-    margin: 0;
-    color: #76715c;
-    font-size: 0.98rem;
-    line-height: 1.45;
-}
 
 .feed-item.event-pill-task {
     color: var(--calendar-task);
@@ -445,7 +343,4 @@ button.event-pill {
         grid-template-columns: auto 1fr;
     }
 
-    .feed-weekday {
-        grid-column: 1 / -1;
-    }
 }

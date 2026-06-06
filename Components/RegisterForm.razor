@@ -1,45 +1,135 @@
-@* @inject AuthService AuthService *@
+@inject AuthService AuthService
 @inject AppSessionService AppSessionService
 @inject NavigationManager Navigation
 
-<EditForm Model="@registerModel" OnValidSubmit="@HandleValidSubmit">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
+<div class="auth-form-container">
+    <h2 class="auth-form-title">Create account</h2>
+    <p class="auth-form-subtitle">Join EasyNote and start organizing your thoughts.</p>
 
-    <div>
-        <label>Username</label>
-        <InputText @bind-Value="registerModel.Username" placeholder="Username" />
-    </div>
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="auth-error">
+            <span>⚠</span>
+            <span>@errorMessage</span>
+        </div>
+    }
 
-    <div>
-        <label>Password</label>
-        <InputText @bind-Value="registerModel.Password" type="password" placeholder="Password" />
-    </div>
+    <EditForm Model="@registerModel" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
 
-    <button type="submit">Register</button>
+        <div class="auth-input-group">
+            <label class="auth-input-label">Username</label>
+            <InputText @bind-Value="registerModel.Username"
+                       class="auth-input"
+                       placeholder="Choose a username"
+                       autocomplete="username" />
+            <ValidationMessage For="() => registerModel.Username" />
+        </div>
 
-    <button type="button" @onclick="() => OnSwitch.InvokeAsync(AuthState.Login)">Got an account, Login here!</button>
-    <button type="button" @onclick="ContinueWithoutAccountAsync">Continue without account</button>
-</EditForm>
+        <div class="auth-input-group">
+            <label class="auth-input-label">Email</label>
+            <InputText @bind-Value="registerModel.Email"
+                       class="auth-input"
+                       placeholder="you@example.com"
+                       type="email"
+                       autocomplete="email" />
+            <ValidationMessage For="() => registerModel.Email" />
+        </div>
+
+        <div class="auth-input-group">
+            <label class="auth-input-label">Password</label>
+            <div class="auth-input-wrapper">
+                <InputText @bind-Value="registerModel.Password"
+                           class="auth-input"
+                           type="@(showPassword ? "text" : "password")"
+                           placeholder="Create a password"
+                           autocomplete="new-password" />
+                <button type="button" class="auth-input-eye" @onclick="() => showPassword = !showPassword" tabindex="-1">
+                    @(showPassword ? "🙈" : "👁")
+                </button>
+            </div>
+            <div class="auth-pw-hint">Min. 8 characters, one uppercase, one number.</div>
+            <ValidationMessage For="() => registerModel.Password" />
+        </div>
+
+        <div class="auth-input-group" style="margin-bottom:1.5rem;">
+            <label class="auth-input-label">Confirm Password</label>
+            <div class="auth-input-wrapper">
+                <InputText @bind-Value="registerModel.ConfirmPassword"
+                           class="auth-input"
+                           type="@(showConfirm ? "text" : "password")"
+                           placeholder="Repeat your password"
+                           autocomplete="new-password" />
+                <button type="button" class="auth-input-eye" @onclick="() => showConfirm = !showConfirm" tabindex="-1">
+                    @(showConfirm ? "🙈" : "👁")
+                </button>
+            </div>
+            <ValidationMessage For="() => registerModel.ConfirmPassword" />
+        </div>
+
+        <button type="submit" class="auth-submit-btn" disabled="@isLoading">
+            @if (isLoading)
+            {
+                <span class="auth-spinner"></span>
+            }
+            Create Account
+        </button>
+    </EditForm>
+
+    <div class="auth-divider">or</div>
+
+    <p class="auth-helper-text">
+        Already have an account?&nbsp;
+        <button type="button" class="auth-link" @onclick="() => OnSwitch.InvokeAsync(AuthState.Login)">Sign in</button>
+    </p>
+
+    <button type="button" class="auth-ghost-btn" style="margin-top:0.75rem;" @onclick="ContinueWithoutAccountAsync">
+        Continue as Guest
+    </button>
+</div>
 
 @code {
-    [Parameter]
-    public EventCallback<AuthState> OnSwitch { get; set; }
+    [Parameter] public EventCallback<AuthState> OnSwitch { get; set; }
+    [Parameter] public EventCallback<string> OnEmailCaptured { get; set; }
 
     private RegisterModel registerModel = new();
+    private string? errorMessage;
+    private bool isLoading;
+    private bool showPassword;
+    private bool showConfirm;
 
-    private Task HandleValidSubmit()
+    private async Task HandleValidSubmit()
     {
-        // var response = await AuthService.Register(registerModel.Username, registerModel.Email, registerModel.Password);
-        // if (response.Success)
-        // {
-        //     Navigation.NavigateTo("/login");
-        // }
-        // else
-        // {
-        //     Console.WriteLine(response.ErrorMessage);
-        // }
-        return Task.CompletedTask;
+        if (registerModel.Password != registerModel.ConfirmPassword)
+        {
+            errorMessage = "Passwords do not match.";
+            return;
+        }
+
+        errorMessage = null;
+        isLoading = true;
+
+        try
+        {
+            var result = await AuthService.Register(registerModel.Username, registerModel.Email, registerModel.Password);
+            if (result.Success)
+            {
+                await OnEmailCaptured.InvokeAsync(registerModel.Email);
+                await OnSwitch.InvokeAsync(AuthState.ConfirmEmail);
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage ?? "Registration failed. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 
     private async Task ContinueWithoutAccountAsync()
@@ -50,10 +140,20 @@
 
     public class RegisterModel
     {
+        [Required(ErrorMessage = "Username is required.")]
+        [MinLength(3, ErrorMessage = "Username must be at least 3 characters.")]
         public string Username { get; set; } = string.Empty;
 
+        [Required(ErrorMessage = "Email is required.")]
+        [EmailAddress(ErrorMessage = "Enter a valid email address.")]
         public string Email { get; set; } = string.Empty;
 
+        [Required(ErrorMessage = "Password is required.")]
+        [MinLength(8, ErrorMessage = "Password must be at least 8 characters.")]
         public string Password { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Please confirm your password.")]
+        public string ConfirmPassword { get; set; } = string.Empty;
     }
 }
+

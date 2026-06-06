@@ -1,0 +1,10 @@
+﻿::deep mud-paper {
+    background-color: #FBFAEC;
+}
+
+::deep mud-elevation-1 {
+    box-shadow: none;
+    /* Line Chart Visual */
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+

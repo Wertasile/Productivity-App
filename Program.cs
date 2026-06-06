@@ -79,6 +79,8 @@ builder.Services.AddScoped<TaskBoardService>();
 builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<CalendarService>();
 builder.Services.AddScoped<ItemService>();
+builder.Services.AddScoped<JournalService>();
+builder.Services.AddScoped<ProjectService>();
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 

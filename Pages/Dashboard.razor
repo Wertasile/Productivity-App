@@ -1,5 +1,6 @@
 ﻿@page "/dashboard"
 @layout MainLayout
+@using ActualBlazorStandAloneAppSPA.Components.Charts
 @using Microsoft.AspNetCore.Authorization
 @inject DashboardService DS
 @inject IDialogService DialogService
@@ -7,110 +8,232 @@
 
 <PageTitle>Dashboard</PageTitle>
 
-<div class="dashboard-container">
+<div class="dashboard-page">
     <!-- Header Section -->
     <section class="dashboard-header">
-        <div>
-            <div class="header-day">@DateTime.Now.ToString("dddd")</div>
-            <h1>@DateTime.Now.ToString("MMMM d")<span>th</span></h1>
-        </div>
+        <div class="lil-text">@DateTime.Now.ToString("dddd")</div>
+        <h1>@DateTime.Now.ToString("MMMM d")<span>th</span></h1>
     </section>
 
     <!-- Main Grid: This Week + Today's Agenda -->
-    <section class="dashboard-grid-main">
+    <section class="d-flex flex-row gap-10 justify-content-between align-items-start">
+
         <!-- This Week Section -->
-        <div class="this-week-panel">
-            <div class="panel-header">
-                <h2>This Week</h2>
-                <div class="filter-chips">
-                    <span class="chip-small">Tasks</span>
-                    <span class="chip-small">Reminders</span>
+        <div class="d-flex flex-column justify-content-between">
+            <div class="d-flex justify-content-between">
+                <div class="d-flex gap-2 flex-column">
+                    <h2>Weekly Summary</h2>
+                    <div class="mini-text">@DateTime.Now.ToString("MMMM d yyyy").ToUpper()</div>
+                </div>
+                <div class="d-flex gap-3 align-items-end">
+                    <div class="d-flex gap-2 align-items-center">
+                        <div
+                            style="height: 10px; width: 10px; border-radius: 999px; background-color: #504BEF; box-shadow: 0 0 10px #504BEF;">
+                        </div>
+                        <div class="mini-text">TASKS</div>
+                    </div>
+                    <div class="d-flex gap-2     align-items-center">
+                        <div
+                            style="height: 10px; width: 10px; border-radius: 999px; background-color: #F67ADF; box-shadow: 0 0 10px #F67ADF;">
+                        </div>
+                        <div class="mini-text">REMINDERS</div>
+                    </div>
                 </div>
             </div>
-            <div class="week-chart">
-                <div class="chart-placeholder"></div>
-                <div class="week-days">
-                    @{
-                        var today = DateTime.Today;
-                        var startOfWeek = today.AddDays(-(int)today.DayOfWeek);
-                        var dayLabels = new[] { "MO", "TU", "WE", "TH", "FR", "SA", "SU" };
-                    }
-                    @for (int i = 0; i < 7; i++)
-                    {
-                        var dayDate = startOfWeek.AddDays(i);
-                        var isToday = dayDate.Date == today;
-                        <div class="week-day-label @(isToday ? "week-day-today" : "")">
-                            <span class="day-abbr">@dayLabels[i]</span>
-                            <span class="day-num">@dayDate.Day</span>
-                        </div>
-                    }
+
+            <WeeklyChart Data="dashboardResponse.WeekItems" />
+        </div>
+
+
+        <!-- Today's Agenda Section -->
+        <div class="d-flex flex-column gap-6">
+            <div class="d-flex justify-content-between">
+                <div class="d-flex gap-2 flex-column">
+                    <h2>Today's Agenda</h2>
+                    <div class="mini-text">@DateTime.Now.ToString("MMMM d yyyy").ToUpper()</div>
                 </div>
+                <div class="d-flex gap-3 align-items-end">
+                    <div class="d-flex gap-2 align-items-center">
+                        <div
+                            style="height: 10px; width: 10px; border-radius: 999px; background-color: #504BEF; box-shadow: 0 0 10px #504BEF;">
+                        </div>
+                        <div class="mini-text">TASKS</div>
+                    </div>
+                    <div class="d-flex gap-2     align-items-center">
+                        <div
+                            style="height: 10px; width: 10px; border-radius: 999px; background-color: #F67ADF; box-shadow: 0 0 10px #F67ADF;">
+                        </div>
+                        <div class="mini-text">REMINDERS</div>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex flex-column gap-1">
+                @{
+                    var todayItems = GetTodayWeekItem();
+                }
+
+                @foreach (var task in todayItems.Tasks)
+                {
+                    <div class="task" @onclick="() => OpenTaskDialog(task)">
+                        <div class="sub-header">@task.Title</div>
+                        <div class="sub-text">@task.Status</div>
+                        <div class="sub-text" style="color:@GetPriorityColor(task.Priority)">@GetPriorityLabel(task.Priority)</div>
+                        <div class="d-flex gap-2">
+                            <div style="font-size: 125%; color: #504BEF;">
+                                <Blazicon Svg="Lucide.Timer" />
+                            </div>
+                            <div class="sub-text">@task.Start.ToString("hh:mm tt")</div>
+                        </div>
+                    </div>
+                }
+                @foreach (var reminder in todayItems.Reminders)
+                {
+                    <div class="reminder" @onclick="() => OpenReminderDialog(reminder)">
+                        <div class="sub-header">@reminder.Name</div>
+                        <div class="sub-text" style="color:@GetPriorityColor(reminder.Priority)">@GetPriorityLabel(reminder.Priority)</div>
+                        <div class="d-flex gap-2 align-items-center">
+                            <div>
+                                @if (reminder.IsAcknowledged)
+                                {
+                                    <div style="font-size: 200%; color: #4BB543;">
+                                        <Blazicon Svg="Lucide.Check" />
+                                    </div>
+
+                                }
+                                else
+                                {
+
+                                    <div style="font-size: 125%; color: #F67ADF;">
+                                        <Blazicon Svg="Lucide.Timer" />
+                                    </div>
+                                }
+                            </div>
+                            <div class="sub-text">@reminder.ReminderDateTime.ToString("hh:mm tt")</div>
+                        </div>
+
+                    </div>
+                }
+                @if (todayItems.Tasks.Count == 0 && todayItems.Reminders.Count == 0)
+                {
+                    <div>No items scheduled for today</div>
+                }
             </div>
         </div>
 
-        <!-- Today's Agenda Section -->
-        <div class="todays-agenda-panel">
-            <h2>Today's Agenda</h2>
-            <div class="agenda-items">
-                @foreach (var task in dashboardResponse.PinnedItems.Tasks)
-                {
-                    <div class="agenda-item agenda-task" @onclick="() => OpenTaskDialog(task)">
-                        <span class="agenda-title">@task.Title</span>
-                        <span class="agenda-tag">@task.EntityType</span>
+        @* Total statistics *@
+        <div class="d-flex flex-column gap-2 align-items-start">
+            
+            <div class="d-flex gap-1 align-items-start justify-content-between p-2  " style="min-width: 300px; border-bottom: 1px solid #ddd; padding: 12px 16px;">
+                <div class="d-flex gap-2">
+                    <div style="font-size: 125%; color: #31b586;">
+                        <Blazicon Svg="Lucide.Timer" />
                     </div>
-                }
-                @foreach (var reminder in dashboardResponse.PinnedItems.Reminders)
-                {
-                    <div class="agenda-item agenda-reminder" @onclick="() => OpenReminderDialog(reminder)">
-                        <span class="agenda-title">@reminder.Name</span>
-                        <span class="agenda-tag">@reminder.EntityType</span>
+                    <div class="mini-text">TOTAL TASKS THIS WEEK</div>
+                </div>  
+                <div class="sub-header">@dashboardResponse.WeekItems.Values.Sum(w => w.Tasks.Count)</div>
+            </div>
+
+            <div class="d-flex gap-1 align-items-start justify-content-between p-2  " style="min-width: 300px; border-bottom: 1px solid #ddd; padding: 12px 16px;">
+                <div class="d-flex gap-2">
+                    <div style="font-size: 125%; color: #31b586;">
+                        <Blazicon Svg="Lucide.Timer" />
                     </div>
-                }
-                @if (dashboardResponse.PinnedItems.Tasks.Count == 0 && dashboardResponse.PinnedItems.Reminders.Count == 0)
-                {
-                    <div class="agenda-empty">No items scheduled for today</div>
-                }
+                    <div class="mini-text">TOTAL REMINDERS THIS WEEK</div>
+                </div>  
+                <div class="sub-header">@dashboardResponse.WeekItems.Values.Sum(w => w.Reminders.Count)</div>
             </div>
         </div>
     </section>
+
+    <!-- Active Projects Section -->
+    <section class="active-projects-section">
+        <h2>Active Projects</h2>
+        <div class="d-flex gap-4 flex-wrap">
+            @foreach (var project in dashboardResponse.Projects.Take(3))
+            {
+                <div class="project">
+
+                    <div class="d-flex justify-content-between ">
+                        <div class="d-flex flex-column gap-1">
+                            <div class="sub-header">@project.Name</div>
+                            <div class="mini-text">
+                                @if (project.Phases == null || project.Phases.Count() == 0)
+                                {
+                                    <text>No Phases</text>
+                                }
+                                else if (project.Phases.Count() == 1)
+                                {
+                                    <text>1 Phase</text>
+                                }
+                                else
+                                {
+                                    <text>@project.Phases.Count() Phases</text>
+                                }
+                            </div>
+                        </div>
+                        <div class="project-days-left">
+                            <div class="mini-text">35 DAYS LEFT</div>
+                            <div class="sub-header">@project.Start.ToString("dd MMM") - @project.End.ToString("dd MMM yyyy")</div>
+                        </div>
+                    </div>
+                    
+                    <div class="std-text">@GetPreview(project.Description)</div>
+
+                    <div>
+                        @if (project.Phases != null && project.Phases.Count() > 0)
+                        {
+                            <div class="d-flex flex-column gap-2 mt-2">
+                                @foreach (var phase in project.Phases.Take(2))
+                                {
+                                    <div class="phase">
+                                        <div class="d-flex justify-content-between">
+                                            <div class="sub-header">@phase.Name</div>
+                                            <div class="mini-text">@phase.Start.ToString("dd MMM") - @phase.End.ToString("dd MMM yyyy")</div>
+                                        </div>
+                                        <div class="std-text">@GetPreview(phase.Description)</div>
+                                    </div>
+                                }
+                            </div>    
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </section>
+
 
     <!-- Recent Notes + Scratch Pad -->
     <section class="dashboard-grid-secondary">
         <!-- Recent Notes Section -->
         <div class="recent-notes-panel">
             <h2>Recent Notes</h2>
-            <div class="notes-grid">
+            <div class="d-flex flex-wrap gap-2">
                 @foreach (var note in dashboardResponse.RecentNotes.Take(2))
                 {
-                    <div class="note-card" @onclick="() => OpenNoteDetail(note)">
-                        <h3>@note.Title</h3>
-                        @if (!string.IsNullOrEmpty(note.Content))
-                        {
-                            <p>@note.Content.Substring(0, Math.Min(120, note.Content.Length))...</p>
-                        }
-                        <span class="note-meta">2 hours ago</span>
+                    <div class="note" @onclick="() => OpenNoteDetail(note)">
+                        <div class="note-header">@note.Title</div>
+                        <p class="std-text">@GetPreview(note.Content)</p>
                     </div>
                 }
             </div>
         </div>
 
-        <!-- Scratch Pad Section -->
+        @* <!-- Scratch Pad Section -->
         <div class="scratch-pad-panel">
             <h2>Scratch Pad</h2>
             <textarea class="scratch-input" placeholder="Capture a passing thought..."></textarea>
-        </div>
+        </div> *@
     </section>
 
     <!-- Quick Access Section -->
-    <section class="quick-access-section">
+    <section class="d-flex flex-column gap-2">
         <h2>Quick Access</h2>
-        <div class="folders-grid">
+        <div class="d-flex gap-2 flex-wrap">
             @foreach (var folder in dashboardResponse.Folders.Take(4))
             {
-                <div class="folder-card">
-                    <div class="folder-icon"></div>
-                    <h3>@folder.Name</h3>
-                    <span class=\"folder-count\">Folder</span>
+                <div class="folder">
+                    <div class="folder-header">@folder.Name</div>
+                    <div class="std-text">@GetPreview(folder.Description)</div>
                 </div>
             }
         </div>
@@ -135,6 +258,12 @@
         var dialog = await DialogService.ShowAsync<EditTaskDialog>("Edit Task", parameters, options);
     }
 
+    private WeekItem GetTodayWeekItem()
+    {
+        var key = DateTime.Now.ToString("yyyy-MM-dd");
+        return dashboardResponse.WeekItems.TryGetValue(key, out var weekItem) ? weekItem : new WeekItem();
+    }
+
     private async Task OpenReminderDialog(Reminder reminder)
     {
         var options = new DialogOptions { CloseOnEscapeKey = true };
@@ -148,5 +277,45 @@
     private void OpenNoteDetail(Note note)
     {
         // TODO: Navigate to note detail or open note editor
+    }
+
+    private static string GetPreview(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return "Click to open";
+        }
+
+        var plainText = System.Text.RegularExpressions.Regex.Replace(content, "<.*?>", string.Empty).Trim();
+
+        if (string.IsNullOrWhiteSpace(plainText))
+        {
+            return "Click to open";
+        }
+
+        const int maxLength = 140;
+        return plainText.Length <= maxLength ? plainText : $"{plainText[..maxLength].Trim()}...";
+    }
+
+    private static string GetPriorityLabel(int priority)
+    {
+        return Math.Clamp(priority, 0, 3) switch
+        {
+            1 => "Low Priority",
+            2 => "Medium Priority",
+            3 => "High Priority",
+            _ => "No Priority"
+        };
+    }
+
+    private static string GetPriorityColor(int priority)
+    {
+        return Math.Clamp(priority, 0, 3) switch
+        {
+            1 => "#2F855A",
+            2 => "#D69E2E",
+            3 => "#C53030",
+            _ => "#718096"
+        };
     }
 }

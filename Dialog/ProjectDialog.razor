@@ -1,0 +1,184 @@
+@using System.Globalization
+@inject ProjectService ProjectService
+
+@if (IsVisible)
+{
+    <div class="cd-backdrop" @onclick="Cancel"></div>
+
+    <div class="cd-panel" role="dialog" aria-modal="true" aria-labelledby="er-title">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2 id="er-title">Start a New Project</h2>
+            <button @onclick="Cancel" aria-label="Close">
+                <Blazicon Svg="Lucide.X" />
+            </button>
+        </div>
+
+        <div class="d-flex flex-column gap-6">
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <div class="cd-error" role="alert">@errorMessage</div>
+            }
+
+            <div class="cd-form">
+                <div class="cd-field">
+                    <label for="er-name">Name <span class="cd-required">*</span></label>
+                    <input id="er-name" type="text" placeholder="Project name" @bind="projectModel.Name"
+                           @bind:event="oninput" />
+                </div>
+
+                <div class="cd-field">
+                    <label for="er-desc">Description</label>
+                    <textarea id="er-desc" placeholder="Describe it" rows="4" @bind="projectModel.Description"
+                              @bind:event="oninput"></textarea>
+                </div>
+
+                    <div class="cd-field">
+                    <label for="et-start">Start <span class="cd-required">*</span></label>
+                    <input id="et-start" type="datetime-local" value="@taskStartInput"
+                           @onchange="e => taskStartInput = FormatDateTimeLocalValue(e.Value)" />
+                </div>
+
+                <div class="cd-field">
+                    <label for="et-end">End <span class="cd-required">*</span></label>
+                    <input id="et-end" type="datetime-local" value="@taskEndInput"
+                           @onchange="e => taskEndInput = FormatDateTimeLocalValue(e.Value)" />
+                </div>
+
+            </div>
+
+            <div class="cd-footer d-flex flex-column gap-2 justify-content-center align-items-center">
+                <button class="secondary-btn" @onclick="Cancel" disabled="@isSubmitting">Cancel</button>
+                <button class="primary-btn" @onclick="SubmitAsync" disabled="@isSubmitting">
+                    @(isSubmitting ? "Saving…" : "Save")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback<bool> OnClose { get; set; }
+        
+    private bool createDialogVisible = false;
+
+    private readonly Project projectModel = new();
+    private string taskStartInput = string.Empty;
+    private string taskEndInput = string.Empty;
+    private bool isSubmitting;
+    private string? errorMessage;
+
+    private bool _initialized;
+
+    protected override void OnParametersSet()
+    {
+        if (!IsVisible)
+        {
+            _initialized = false;
+            return;
+        }
+
+        if (_initialized)
+            return;
+
+        _initialized = true;
+
+        projectModel.Name = string.Empty;
+        projectModel.Description = string.Empty;
+        projectModel.Start = DateTime.MinValue;
+        projectModel.End = DateTime.MinValue;
+        projectModel.CreatedAt = DateTime.UtcNow;
+        projectModel.UpdatedAt = DateTime.UtcNow;
+
+        taskStartInput = string.Empty;
+        taskEndInput = string.Empty;
+        errorMessage = null;
+    }
+
+    private void OnCreateDialogClosedAsync()
+    {
+        createDialogVisible = false;
+    }
+
+    private void OpenCreateDateDialogAsync()
+    {
+        createDialogVisible = true;
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (isSubmitting) return;
+
+        if (string.IsNullOrWhiteSpace(projectModel.Name))
+        {
+            errorMessage = "Project name is required.";
+            return;
+        }
+
+        errorMessage = null;
+
+        try
+        {
+            isSubmitting = true;
+
+            if (!TryParseDateTimeLocal(taskStartInput, out var taskStart))
+            {
+                errorMessage = "Invalid start date and time format.";
+                return;
+            }
+            if (!TryParseDateTimeLocal(taskEndInput, out var taskEnd))
+            {
+                errorMessage = "Invalid end date and time format.";
+                return;
+            }
+
+            projectModel.Start = taskStart;
+            projectModel.End = taskEnd;
+            projectModel.UpdatedAt = DateTime.UtcNow;
+
+            var createdItem = await ProjectService.CreateProject(projectModel);
+
+            if (createdItem is null)
+            {
+                errorMessage = "The project could not be created.";
+                return;
+            }
+
+            await OnClose.InvokeAsync(true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task Cancel() => await OnClose.InvokeAsync(false);
+
+    private static bool TryParseDateTimeLocal(string? value, out DateTime parsed)
+    {
+        parsed = default;
+        if (string.IsNullOrWhiteSpace(value)) return false;
+        if (DateTime.TryParseExact(value, new[] { "yyyy-MM-ddTHH:mm", "yyyy-MM-ddTHH:mm:ss", "yyyy-MM-ddTHH:mm:ss.fff" },
+                CultureInfo.InvariantCulture, DateTimeStyles.None, out parsed))
+            return true;
+        return DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsed);
+    }
+
+    private static string FormatDateTimeLocalValue(object? value)
+    {
+        if (value is DateTime dt)
+            return dt == default ? string.Empty : dt.ToString("yyyy-MM-ddTHH:mm");
+        var s = value?.ToString();
+        return string.IsNullOrWhiteSpace(s) ? string.Empty : s;
+    }
+
+    private static string ToDateTimeLocalValue(DateTime value)
+        => value == default ? string.Empty : value.ToString("yyyy-MM-ddTHH:mm");
+
+}

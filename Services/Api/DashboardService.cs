@@ -32,8 +32,8 @@ public class DashboardService
                 PinnedItems = new PinnedItems
                 {
                     Notes = state.Notes.OrderByDescending(note => note.UpdatedAt).Take(3).ToList(),
-                    Reminders = state.Reminders.OrderBy(reminder => reminder.ReminderDate).Take(3).ToList(),
-                    Tasks = state.Tasks.OrderBy(task => task.DueDate).Take(3).ToList()
+                    Reminders = state.Reminders.OrderBy(reminder => reminder.ReminderDateTime).Take(3).ToList(),
+                    Tasks = state.Tasks.OrderBy(task => task.Start).Take(3).ToList()
                 },
                 Folders = state.Folders
                     .Where(folder => folder.IsQuickAccess)
@@ -55,8 +55,8 @@ public class DashboardService
                 var currentDay = weekStart.AddDays(offset);
                 response.WeekItems[currentDay.DayOfWeek.ToString()] = new WeekItem
                 {
-                    Tasks = state.Tasks.Where(task => task.DueDate.Date == currentDay).OrderBy(task => task.DueDate).ToList(),
-                    Reminders = state.Reminders.Where(reminder => reminder.ReminderDate.Date == currentDay).OrderBy(reminder => reminder.ReminderDate).ToList()
+                    Tasks = state.Tasks.Where(task => task.Start.Date == currentDay).OrderBy(task => task.Start).ToList(),
+                    Reminders = state.Reminders.Where(reminder => reminder.ReminderDateTime.Date == currentDay).OrderBy(reminder => reminder.ReminderDateTime).ToList()
                 };
             }
 

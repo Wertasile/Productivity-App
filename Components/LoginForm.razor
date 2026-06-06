@@ -2,53 +2,103 @@
 @inject AppSessionService AppSessionService
 @inject NavigationManager Navigation
 
-<EditForm Model="@loginModel" OnValidSubmit="@HandleValidSubmit">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
-
-    <div>
-        <label>Email</label>
-        <InputText @bind-Value="loginModel.Email" placeholder="Email" />
-    </div>
-
-    <div>
-        <label>Password</label>
-        <InputText @bind-Value="loginModel.Password" type="password" placeholder="Password" />
-    </div>
+<div class="auth-form-container">
+    <h2 class="auth-form-title">Welcome back</h2>
+    <p class="auth-form-subtitle">Sign in to your account to continue.</p>
 
     @if (!string.IsNullOrWhiteSpace(errorMessage))
     {
-        <div>@errorMessage</div>
+        <div class="auth-error">
+            <span>⚠</span>
+            <span>@errorMessage</span>
+        </div>
     }
 
-    <button type="submit">Login</button>
+    <EditForm Model="@loginModel" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
 
-    <button type="button" @onclick="() => OnSwitch.InvokeAsync(AuthState.Register)">New to EasyNote? Create an Account!</button>
-    <button type="button" @onclick="ContinueWithoutAccountAsync">Continue without account</button>
-</EditForm>
+        <div class="auth-input-group">
+            <label class="auth-input-label">Email</label>
+            <InputText @bind-Value="loginModel.Email"
+                       class="input"
+                       placeholder="you@example.com"
+                       type="email"
+                       autocomplete="email" />
+            <ValidationMessage For="() => loginModel.Email" />
+        </div>
+
+        <div class="auth-input-group">
+            <label class="auth-input-label">Password</label>
+            <div class="auth-input-wrapper">
+                <InputText @bind-Value="loginModel.Password"
+                           class="auth-input"
+                           type="@(showPassword ? "text" : "password")"
+                           placeholder="Enter your password"
+                           autocomplete="current-password" />
+                <button type="button" class="auth-input-eye" @onclick="() => showPassword = !showPassword" tabindex="-1">
+                    @(showPassword ? "🙈" : "👁")
+                </button>
+            </div>
+            <ValidationMessage For="() => loginModel.Password" />
+        </div>
+
+        <div class="auth-helper-row">
+            <span></span>
+            <button type="button" class="auth-link" @onclick="() => OnSwitch.InvokeAsync(AuthState.ForgotPassword)">
+                Forgot password?
+            </button>
+        </div>
+
+        <button type="submit" class="primary-btn" disabled="@isLoading">
+            @if (isLoading)
+            {
+                <span class="auth-spinner"></span>
+            }
+            Sign In
+        </button>
+    </EditForm>
+
+    <div class="auth-divider">or</div>
+
+    <div class="d-flex gap- flex-column align-items-center">
+        <button type="button" class="secondary-btn" @onclick="() => OnSwitch.InvokeAsync(AuthState.Register)">
+            Create a new account
+        </button>
+
+        <button type="button" class="secondary-btn" style="margin-top:0.5rem;" @onclick="ContinueWithoutAccountAsync">
+            Continue as Guest
+        </button>
+    </div>
+
+</div>
 
 @code {
-    [Parameter]
-    public EventCallback<AuthState> OnSwitch { get; set; }
+    [Parameter] public EventCallback<AuthState> OnSwitch { get; set; }
 
     private LoginModel loginModel = new();
     private string? errorMessage;
+    private bool isLoading;
+    private bool showPassword;
 
     private async Task HandleValidSubmit()
     {
         errorMessage = null;
-
+        isLoading = true;
         try
         {
             var response = await AuthService.LoginAsync(loginModel.Email, loginModel.Password);
             if (response == "Login successful.")
-            {
                 Navigation.NavigateTo("/dashboard");
-            }
+            else
+                errorMessage = response;
         }
         catch (Exception ex)
         {
             errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
         }
     }
 
@@ -60,10 +110,12 @@
 
     public class LoginModel
     {
-        [EditorRequired]
+        [Required(ErrorMessage = "Email is required.")]
+        [EmailAddress(ErrorMessage = "Enter a valid email address.")]
         public string Email { get; set; } = string.Empty;
 
-        [EditorRequired]
+        [Required(ErrorMessage = "Password is required.")]
         public string Password { get; set; } = string.Empty;
     }
 }
+

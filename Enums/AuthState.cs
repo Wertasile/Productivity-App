@@ -3,6 +3,8 @@ public enum AuthState
 {
     Login,
     Register,
-    ConfirmEmail
+    ConfirmEmail,
+    ForgotPassword,
+    ResetPassword
 }
 

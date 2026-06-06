@@ -1,0 +1,17 @@
+@page "/habits"
+@using Microsoft.AspNetCore.Authorization
+@layout MainLayout
+@attribute [Authorize]
+@inject JournalService JournalService
+
+<PageTitle>Habits</PageTitle>
+
+<div class="sub-header">
+    The habits feature is currently in development, here you can insert and track your habits, which you will be notified of 
+    when they are to be done and right before as well. You can create habits with different frequencies, such as daily, weekly, or monthly, and you can also set reminders for each habit.
+    You can view a history of your habits and track your progress over time, which can help you stay motivated and on track with your goals.
+</div>
+
+@code{
+    
+}

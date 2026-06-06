@@ -1,0 +1,242 @@
+@using System.Globalization
+@inject ProjectService ProjectService
+
+@if (IsVisible)
+{
+    <div class="cd-backdrop" @onclick="Cancel"></div>
+
+    <div class="cd-panel" role="dialog" aria-modal="true" aria-labelledby="er-title">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2 id="er-title">Add a Task to Phase</h2>
+            <button @onclick="Cancel" aria-label="Close">
+                <Blazicon Svg="Lucide.X" />
+            </button>
+        </div>
+
+        <div class="d-flex flex-column gap-6">
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <div class="cd-error" role="alert">@errorMessage</div>
+            }
+
+                <div class="cd-form">
+                    <div class="cd-field">
+                        <label for="task-title">Title <span class="cd-required">*</span></label>
+                        <input id="task-title" type="text" placeholder="Task title" @bind="taskModel.Title"
+                               @bind:event="oninput" />
+                    </div>
+
+                    <div class="cd-field">
+                        <label for="task-desc">Description</label>
+                        <textarea id="task-desc" placeholder="Optional description" rows="4" @bind="taskModel.Description"
+                                  @bind:event="oninput"></textarea>
+                    </div>
+
+                    <div class="cd-field">
+                        <label for="task-start">Start <span class="cd-required">*</span></label>
+                        <input id="task-start" type="datetime-local" value="@taskStartInput"
+                               @onchange="e => taskStartInput = FormatDateTimeLocalValue(e.Value)" />
+                    </div>
+
+                    <div class="cd-field">
+                        <label for="task-end">End <span class="cd-required">*</span></label>
+                        <input id="task-end" type="datetime-local" value="@taskEndInput"
+                               @onchange="e => taskEndInput = FormatDateTimeLocalValue(e.Value)" />
+                    </div>
+
+                    <div class="cd-field">
+                        <label for="task-priority">Priority</label>
+                        <select id="task-priority" @bind="taskModel.Priority">
+                            @foreach (var option in PriorityOptions)
+                            {
+                                <option value="@option.Value">@option.Label</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="cd-field">
+                        <label for="task-status">Status</label>
+                        <select id="task-status" @bind="taskModel.Status">
+                            @foreach (var status in TaskStatusOptions)
+                            {
+                                <option value="@status">@status</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="cd-field">
+                        <label for="task-completion">Completion DateTime</label>
+                        <input id="task-completion" type="datetime-local" value="@taskCompletionInput"
+                               @onchange="e => taskCompletionInput = FormatDateTimeLocalValue(e.Value)" />
+                    </div>
+                </div>
+
+            <div class="cd-footer d-flex flex-column gap-2 justify-content-center align-items-center">
+                <button class="secondary-btn" @onclick="Cancel" disabled="@isSubmitting">Cancel</button>
+                <button class="primary-btn" @onclick="SubmitAsync" disabled="@isSubmitting">
+                    @(isSubmitting ? "Saving…" : "Save")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback<bool> OnClose { get; set; }
+    [Parameter] public Phase Phase { get; set; }
+    private bool createDialogVisible = false;
+
+    private readonly TaskItem taskModel = new TaskItem();
+
+    private string taskCompletionInput = string.Empty;
+    private string taskStartInput = string.Empty;
+    private string taskEndInput = string.Empty;
+    private bool isSubmitting;
+    private string? errorMessage;
+
+    private bool _initialized;
+
+    protected override void OnParametersSet()
+    {
+        if (!IsVisible)
+        {
+            _initialized = false;
+            return;
+        }
+
+        if (_initialized)
+            return;
+
+        _initialized = true;
+
+        taskModel.Title = string.Empty;
+        taskModel.Description = string.Empty;
+        taskModel.Start = DateTime.MinValue;
+        taskModel.End = DateTime.MinValue;
+        taskModel.CreatedAt = DateTime.UtcNow;
+        taskModel.UpdatedAt = DateTime.UtcNow;
+
+        taskStartInput = string.Empty;
+        taskEndInput = string.Empty;
+        errorMessage = null;
+    }
+
+    private void OnCreateDialogClosedAsync()
+    {
+        createDialogVisible = false;
+    }
+
+    private void OpenCreateDateDialogAsync()
+    {
+        createDialogVisible = true;
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (isSubmitting) return;
+
+        if (string.IsNullOrWhiteSpace(taskModel.Title))
+        {
+            errorMessage = "Task title is required.";
+            return;
+        }
+
+        errorMessage = null;
+
+        try
+        {
+            isSubmitting = true;
+
+            if (!TryParseDateTimeLocal(taskStartInput, out var taskStart))
+            {
+                errorMessage = "Invalid start date and time format.";
+                return;
+            }
+            if (!TryParseDateTimeLocal(taskEndInput, out var taskEnd))
+            {
+                errorMessage = "Invalid end date and time format.";
+                return;
+            }
+
+            taskModel.Start = taskStart;
+            taskModel.End = taskEnd;
+            taskModel.UpdatedAt = DateTime.UtcNow;
+
+            var createdItem = await ProjectService.CreatePhaseTask(taskModel, Phase.Id);
+
+            if (createdItem is null)
+            {
+                errorMessage = "The task could not be created.";
+                return;
+            }
+
+            await OnClose.InvokeAsync(true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task Cancel() => await OnClose.InvokeAsync(false);
+
+    private static bool TryParseDateTimeLocal(string? value, out DateTime parsed)
+    {
+        parsed = default;
+        if (string.IsNullOrWhiteSpace(value)) return false;
+        if (DateTime.TryParseExact(value, new[] { "yyyy-MM-ddTHH:mm", "yyyy-MM-ddTHH:mm:ss", "yyyy-MM-ddTHH:mm:ss.fff" },
+                CultureInfo.InvariantCulture, DateTimeStyles.None, out parsed))
+            return true;
+        return DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsed);
+    }
+
+    private static string FormatDateTimeLocalValue(object? value)
+    {
+        if (value is DateTime dt)
+            return dt == default ? string.Empty : dt.ToString("yyyy-MM-ddTHH:mm");
+        var s = value?.ToString();
+        return string.IsNullOrWhiteSpace(s) ? string.Empty : s;
+    }
+
+    private static string ToDateTimeLocalValue(DateTime value)
+        => value == default ? string.Empty : value.ToString("yyyy-MM-ddTHH:mm");
+
+        private static string NormalizeTaskStatus(string? status)
+    {
+        return status?.Trim() switch
+        {
+            "Not Started" => "Not Started",
+            "In Progress" => "In Progress",
+            "Completed" => "Completed",
+            "Halted" => "Halted",
+            "Hiatus" => "Hiatus",
+            _ => "Not Started"
+        };
+    }
+
+    private static readonly (int Value, string Label)[] PriorityOptions =
+    {
+        (0, "No Priority"),
+        (1, "Low Priority (Green)"),
+        (2, "Medium Priority (Yellow)"),
+        (3, "High Priority (Red)")
+    };
+
+    private static readonly string[] TaskStatusOptions =
+    {
+        "Not Started",
+        "In Progress",
+        "Completed",
+        "Halted",
+        "Hiatus"
+    };
+
+
+}

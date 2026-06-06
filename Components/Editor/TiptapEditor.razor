@@ -2,19 +2,39 @@
 @implements IAsyncDisposable
 @inject IJSRuntime JS
 
+@* THIS IS THE EDITOR ITSELF *@
+
 <div class="editor-wrapper note-editor-paper">
     <div @ref="editorDiv" class="editor-host"></div>
 </div>
 
 @code {
+    // reference to the div element that will host the editor, used to pass to JavaScript when creating the editor instance
+    //  similar to useRef in React, allows us to get a reference to the actual DOM element after it has been rendered so we can initialize the editor on it
     private ElementReference editorDiv;
+
+    // reference to the .NET object that will be passed to JavaScript to allow JS 
+    //  call back into .NET methods when content or state changes occur in the editor
     private DotNetObjectReference<TiptapEditor>? objRef;
+
+    // flag to track whether the editor instance has been created, used to ensure proper cleanup in DisposeAsync
     private bool isEditorCreated;
 
+    // editor Id, allows multiple instance of editor to exist, stored in a key in a dictionary on the JavaScript side.
+    // and passed to JavaScript functions to identify which editor instance to interact with
     [Parameter] public string EditorId { get; set; } = Guid.NewGuid().ToString();
-    [Parameter] public string InitialContent { get; set; } = string.Empty;
+
+    // Initial content of the editor, which can be HTML, JSON, or plain text depending on how the JavaScript side is implemented. 
+    // This allows the editor to be pre-populated with existing content when it is first rendered.
+    [Parameter]public string InitialContent { get; set; } = string.Empty;
+
+    // event callback for when the editor's content changes, passing the new content as an argument
     [Parameter] public EventCallback<EditorContentChangedArgs> OnChange { get; set; }
+
+    // event callback for when the editor's state changes, passing the new state as an argument
     [Parameter] public EventCallback<EditorStateChangedArgs> OnStateChange { get; set; }
+
+
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -23,8 +43,11 @@
             return;
         }
 
+        // Create a .NET object reference to this component instance, which will be passed to JavaScript to allow JS to call back into .NET methods
         objRef = DotNetObjectReference.Create(this);
 
+        // create editor instance on JavaScript side, passing the editor Id, the div element reference to host the editor, the .NET object reference for callbacks, 
+        // and an options object with initial content and autofocus settings
         await JS.InvokeVoidAsync("createEditor",
             EditorId,
             editorDiv,
@@ -39,18 +62,39 @@
         isEditorCreated = true;
     }
 
+    public async Task SetContentAsync(string html)
+    {
+        await JS.InvokeVoidAsync("setEditorContent", EditorId, html);
+    }
+
+    public async Task<string> GetContentAsync()
+    {
+        return await JS.InvokeAsync<string>("getEditorHtml", EditorId);
+    }
+
+    // --------------- METHODS CALLED FROM JAVASCRIPT TO NOTIFY .NET OF CHANGES IN THE EDITOR MADE VIA DOTNET OBJECT REFERENCE ----------------
+
+    // This method is called from JavaScript when the editor's content changes. 
+    // It receives the new content as an argument and invokes the OnChange event callback to notify the parent component of the change.
+    // object received format :- { html: string, json: JsonElement, text: string }
     [JSInvokable]
     public async Task OnContentChanged(EditorContentChangedArgs content)
     {
         await OnChange.InvokeAsync(content);
     }
 
+    // This method is called from JavaScript when the editor's state changes (e.g. selection changes, formatting changes).
+    // It receives the editors state as an argument and invokes the OnStateChange event callback to notify the parent component of the change.
+    // object received format :- { isBold: bool, isItalic: bool, isStrike: bool, isUnderline: bool ..... , canRedo: bool }
     [JSInvokable]
     public async Task OnEditorStateChanged(EditorStateChangedArgs state)
     {
         await OnStateChange.InvokeAsync(state);
     }
 
+    // -------------------------------------------------------------------------------------------------------------------------------------
+
+    // Ensure the editor instance is properly destroyed when the component is disposed to prevent memory leaks
     public async ValueTask DisposeAsync()
     {
         if (isEditorCreated)
@@ -66,14 +110,18 @@
 
         objRef?.Dispose();
     }
-
+    
+    // This class can be expanded with more properties as needed to reflect the editor's content
+    // EDITOR CONTENT i.e. the HTML content, JSON content, plain text content, etc.
     public sealed class EditorContentChangedArgs
     {
         public string Html { get; set; } = string.Empty;
         public JsonElement Json { get; set; }
         public string Text { get; set; } = string.Empty;
     }
-
+    
+    // This class can be expanded with more properties as needed to reflect the editor's state
+    // EDITOR STATE i.e. whether the current selection is bold, italic, etc., and whether undo/redo are possible
     public sealed class EditorStateChangedArgs
     {
         public bool IsBold { get; set; }

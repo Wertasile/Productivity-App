@@ -53,12 +53,15 @@
                                     <div class="event eventTask" @onclick="() => OpenTaskAsync(task)">
                                         <div>@task.Title</div>
                                         <div>@task.Progress %</div>
+                                        <div>@task.Status</div>
+                                        <div style="color:@GetPriorityColor(task.Priority)">@GetPriorityLabel(task.Priority)</div>
                                     </div>
                                 }
                                 else if (item is Reminder reminder)
                                 {
                                     <div class="event eventReminder" @onclick="() => OpenReminderAsync(reminder)">
-                                        @reminder.Name
+                                        <div>@reminder.Name</div>
+                                        <div style="color:@GetPriorityColor(reminder.Priority)">@GetPriorityLabel(reminder.Priority)</div>
                                     </div>
                                 }
                             }
@@ -148,12 +151,12 @@
         {
             foreach (var dateItem in item.Value.Tasks)
             {
-                AddEvent(dateItem.DueDate, dateItem);
+                AddEvent(dateItem.Start, dateItem);
             }
 
             foreach (var dateItem in item.Value.Reminders)
             {
-                AddEvent(dateItem.ReminderDate, dateItem);
+                AddEvent(dateItem.ReminderDateTime, dateItem);
             }
         }
     }
@@ -176,5 +179,27 @@
         int weekOfMonth = ((DateTime.Now.Day + offset - 1) / 7) + 1;
 
         return weekOfMonth;
+    }
+
+    private static string GetPriorityLabel(int priority)
+    {
+        return Math.Clamp(priority, 0, 3) switch
+        {
+            1 => "Low Priority",
+            2 => "Medium Priority",
+            3 => "High Priority",
+            _ => "No Priority"
+        };
+    }
+
+    private static string GetPriorityColor(int priority)
+    {
+        return Math.Clamp(priority, 0, 3) switch
+        {
+            1 => "#2F855A",
+            2 => "#D69E2E",
+            3 => "#C53030",
+            _ => "#718096"
+        };
     }
 }

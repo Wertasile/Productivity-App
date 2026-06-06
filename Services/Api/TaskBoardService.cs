@@ -34,14 +34,14 @@ public class TaskBoardService
                     .ToDictionary(day => day.ToString("yyyy-MM-dd"), _ => new DateItems())
             };
 
-            foreach (var task in state.Tasks.Where(task => task.DueDate.Date >= weekStart && task.DueDate.Date <= weekEnd))
+            foreach (var task in state.Tasks.Where(task => task.Start.Date >= weekStart && task.Start.Date <= weekEnd))
             {
-                response.Items[task.DueDate.ToString("yyyy-MM-dd")].Tasks.Add(task);
+                response.Items[task.Start.ToString("yyyy-MM-dd")].Tasks.Add(task);
             }
 
-            foreach (var reminder in state.Reminders.Where(reminder => reminder.ReminderDate.Date >= weekStart && reminder.ReminderDate.Date <= weekEnd))
+            foreach (var reminder in state.Reminders.Where(reminder => reminder.ReminderDateTime.Date >= weekStart && reminder.ReminderDateTime.Date <= weekEnd))
             {
-                response.Items[reminder.ReminderDate.ToString("yyyy-MM-dd")].Reminders.Add(reminder);
+                response.Items[reminder.ReminderDateTime.ToString("yyyy-MM-dd")].Reminders.Add(reminder);
             }
 
             foreach (var note in state.Notes.Where(note => note.UpdatedAt.Date >= weekStart && note.UpdatedAt.Date <= weekEnd))

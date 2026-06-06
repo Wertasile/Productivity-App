@@ -1,0 +1,16 @@
+@page "/payments"
+@using Microsoft.AspNetCore.Authorization
+@layout MainLayout
+@attribute [Authorize]
+@inject JournalService JournalService
+
+<PageTitle>Payments</PageTitle>
+
+<div class="sub-header">
+    The payments feature is currently in development, here you can insert and track recurring payments, which you will be notified of 
+    when they are due. You can also view a history of past payments and upcoming payments.
+</div>
+
+@code{
+
+}

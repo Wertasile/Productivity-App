@@ -1,178 +1,204 @@
-@using MudBlazor
+@using System.Globalization
 @inject ItemService ItemService
 
-<MudDialog>
-    <TitleContent>
-        Add Item for @SelectedDate.ToString("dd MMM yyyy")
-    </TitleContent>
+@if (IsVisible)
+{
+    <div class="cd-backdrop" @onclick="Cancel"></div>
 
-    <DialogContent>
-        <div class="d-flex gap-2 mb-4">
-            <MudButton Variant="@(selectedForm == CalendarEntryType.Task ? Variant.Filled : Variant.Outlined)"
-                       Color="Color.Primary"
-                       OnClick="@(() => selectedForm = CalendarEntryType.Task)">
-                Task
-            </MudButton>
-            <MudButton Variant="@(selectedForm == CalendarEntryType.Reminder ? Variant.Filled : Variant.Outlined)"
-                       Color="Color.Secondary"
-                       OnClick="@(() => selectedForm = CalendarEntryType.Reminder)">
-                Reminder
-            </MudButton>
+    <div class="cd-panel" role="dialog" aria-modal="true" aria-labelledby="cd-title">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2 id="cd-title">Add @selectedForm for @SelectedDate.ToString("dd MMM yyyy")</h2>
+            <button class="" @onclick="Cancel" aria-label="Close">
+                <Blazicon Svg="Lucide.X" />
+            </button>
         </div>
 
-        @if (!string.IsNullOrWhiteSpace(errorMessage))
-        {
-            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4">
-                @errorMessage
-            </MudAlert>
-        }
-
-        @if (selectedForm == CalendarEntryType.Task)
-        {
-            <div class="d-flex flex-column gap-3">
-                <MudTextField @bind-Value="taskModel.Title"
-                              Label="Title"
-                              Variant="Variant.Outlined"
-                              Required="true" />
-
-                <MudTextField @bind-Value="taskModel.Description"
-                              Label="Description"
-                              Variant="Variant.Outlined"
-                              Lines="4" />
-
-                <MudDatePicker Label="Due date"
-                               Date="taskDate"
-                               DateChanged="OnTaskDateChanged"
-                               Variant="Variant.Outlined" />
-
-                <MudTimePicker Label="Due time"
-                               Time="taskTime"
-                               TimeChanged="OnTaskTimeChanged"
-                               AmPm="true"
-                               Variant="Variant.Outlined" />
+        <div class="d-flex flex-column gap-6">
+            <div class="d-flex gap-2">
+                <button class="cd-type-btn @(selectedForm == CalendarEntryType.Task ? "cd-type-btn--active-task" : "")"
+                        @onclick="@(() => selectedForm = CalendarEntryType.Task)">
+                    Task
+                </button>
+                <button
+                    class="cd-type-btn @(selectedForm == CalendarEntryType.Reminder ? "cd-type-btn--active-reminder" : "")"
+                    @onclick="@(() => selectedForm = CalendarEntryType.Reminder)">
+                    Reminder
+                </button>
             </div>
-        }
-        else
-        {
-            <div class="d-flex flex-column gap-3">
-                <MudTextField @bind-Value="reminderModel.Name"
-                              Label="Name"
-                              Variant="Variant.Outlined"
-                              Required="true" />
 
-                <MudTextField @bind-Value="reminderModel.Description"
-                              Label="Description"
-                              Variant="Variant.Outlined"
-                              Lines="4" />
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <div class="cd-error" role="alert">@errorMessage</div>
+            }
 
-                <MudDatePicker Label="Reminder date"
-                               Date="reminderDate"
-                               DateChanged="OnReminderDateChanged"
-                               Variant="Variant.Outlined" />
+            @if (selectedForm == CalendarEntryType.Task)
+            {
+                <div class="cd-form">
+                    <div class="cd-field">
+                        <label for="task-title">Title <span class="cd-required">*</span></label>
+                        <input id="task-title" type="text" placeholder="Task title" @bind="taskModel.Title"
+                               @bind:event="oninput" />
+                    </div>
 
-                <MudTimePicker Label="Reminder time"
-                               Time="reminderTime"
-                               TimeChanged="OnReminderTimeChanged"
-                               AmPm="true"
-                               Variant="Variant.Outlined" />
+                    <div class="cd-field">
+                        <label for="task-desc">Description</label>
+                        <textarea id="task-desc" placeholder="Optional description" rows="4" @bind="taskModel.Description"
+                                  @bind:event="oninput"></textarea>
+                    </div>
+
+                    <div class="cd-field">
+                        <label for="task-start">Start <span class="cd-required">*</span></label>
+                        <input id="task-start" type="datetime-local" value="@taskStartInput"
+                               @onchange="e => taskStartInput = FormatDateTimeLocalValue(e.Value)" />
+                    </div>
+
+                    <div class="cd-field">
+                        <label for="task-end">End <span class="cd-required">*</span></label>
+                        <input id="task-end" type="datetime-local" value="@taskEndInput"
+                               @onchange="e => taskEndInput = FormatDateTimeLocalValue(e.Value)" />
+                    </div>
+
+                    <div class="cd-field">
+                        <label for="task-priority">Priority</label>
+                        <select id="task-priority" @bind="taskModel.Priority">
+                            @foreach (var option in PriorityOptions)
+                            {
+                                <option value="@option.Value">@option.Label</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="cd-field">
+                        <label for="task-status">Status</label>
+                        <select id="task-status" @bind="taskModel.Status">
+                            @foreach (var status in TaskStatusOptions)
+                            {
+                                <option value="@status">@status</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="cd-field">
+                        <label for="task-completion">Completion DateTime</label>
+                        <input id="task-completion" type="datetime-local" value="@taskCompletionInput"
+                               @onchange="e => taskCompletionInput = FormatDateTimeLocalValue(e.Value)" />
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="cd-form">
+                    <div class="cd-field">
+                        <label for="reminder-name">Name <span class="cd-required">*</span></label>
+                        <input id="reminder-name" type="text" placeholder="Reminder name" @bind="reminderModel.Name"
+                               @bind:event="oninput" />
+                    </div>
+
+                    <div class="cd-field">
+                        <label for="reminder-desc">Description</label>
+                        <textarea id="reminder-desc" placeholder="Optional description" rows="4"
+                                  @bind="reminderModel.Description" @bind:event="oninput"></textarea>
+                    </div>
+
+                    <div class="cd-field">
+                        <label for="reminder-datetime">Reminder date & time <span class="cd-required">*</span></label>
+                        <input id="reminder-datetime" type="datetime-local" value="@reminderDateTimeInput"
+                               @onchange="e => reminderDateTimeInput = FormatDateTimeLocalValue(e.Value)" />
+                    </div>
+
+                    <div class="cd-field">
+                        <label for="reminder-priority">Priority</label>
+                        <select id="reminder-priority" @bind="reminderModel.Priority">
+                            @foreach (var option in PriorityOptions)
+                            {
+                                <option value="@option.Value">@option.Label</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+            }
+            <div class="cd-footer">
+                <button class="secondary-btn" @onclick="Cancel" disabled="@isSubmitting">Cancel</button>
+                <button class="primary-btn" @onclick="SubmitAsync" disabled="@isSubmitting">
+                    @(isSubmitting ? "Saving…" : "Save")
+                </button>
             </div>
-        }
-    </DialogContent>
+        </div>
 
-    <DialogActions>
-        <MudButton OnClick="Cancel" Disabled="isSubmitting">Cancel</MudButton>
-        <MudButton Color="Color.Primary"
-                   Variant="Variant.Filled"
-                   OnClick="SubmitAsync"
-                   Disabled="isSubmitting">
-            @(isSubmitting ? "Saving..." : "Save")
-        </MudButton>
-    </DialogActions>
-</MudDialog>
+    </div>
+}
 
 @code {
-    private enum CalendarEntryType
-    {
-        Task,
-        Reminder
-    }
+    private enum CalendarEntryType { Task, Reminder }
 
-    [CascadingParameter]
-    private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public DateTime SelectedDate { get; set; }
+    [Parameter] public string? InitialType { get; set; }
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback<BaseItem?> OnClose { get; set; }
 
-    [Parameter]
-    public DateTime SelectedDate { get; set; }
-
-    [Parameter]
-    public string? InitialType { get; set; }
-
-    private readonly TaskItem taskModel = new()
-    {
-        Title = string.Empty,
-        Description = string.Empty
-    };
-
-    private readonly Reminder reminderModel = new()
-    {
-        Name = string.Empty,
-        Description = string.Empty
-    };
+    private readonly TaskItem taskModel = new() { Title = string.Empty, Description = string.Empty };
+    private readonly Reminder reminderModel = new() { Name = string.Empty, Description = string.Empty };
 
     private CalendarEntryType selectedForm = CalendarEntryType.Task;
-    private DateTime? taskDate;
-    private TimeSpan? taskTime;
-    private DateTime? reminderDate;
-    private TimeSpan? reminderTime;
+    private string taskStartInput = string.Empty;
+    private string taskEndInput = string.Empty;
+    private string taskCompletionInput = string.Empty;
+    private string reminderDateTimeInput = string.Empty;
     private bool isSubmitting;
     private string? errorMessage;
 
-    protected override void OnInitialized()
+    private string _initializationKey = string.Empty;
+
+    protected override void OnParametersSet()
     {
-        selectedForm = string.Equals(InitialType, "reminder", StringComparison.OrdinalIgnoreCase)
-            ? CalendarEntryType.Reminder
-            : CalendarEntryType.Task;
+        if (!IsVisible)
+        {
+            _initializationKey = string.Empty;
+            return;
+        }
 
         var baseDate = SelectedDate == default ? DateTime.Today : SelectedDate.Date;
+        var currentKey = $"{baseDate:yyyy-MM-dd}|{InitialType?.Trim().ToLowerInvariant()}";
 
-        taskDate = baseDate;
-        reminderDate = baseDate;
-        taskTime = new TimeSpan(9, 0, 0);
-        reminderTime = new TimeSpan(9, 0, 0);
-        taskModel.DueDate = CombineDateAndTime(taskDate, taskTime);
-        reminderModel.ReminderDate = CombineDateAndTime(reminderDate, reminderTime);
-    }
-
-    private void OnTaskDateChanged(DateTime? value)
-    {
-        taskDate = value;
-        taskModel.DueDate = CombineDateAndTime(taskDate, taskTime);
-    }
-
-    private void OnTaskTimeChanged(TimeSpan? value)
-    {
-        taskTime = value;
-        taskModel.DueDate = CombineDateAndTime(taskDate, taskTime);
-    }
-
-    private void OnReminderDateChanged(DateTime? value)
-    {
-        reminderDate = value;
-        reminderModel.ReminderDate = CombineDateAndTime(reminderDate, reminderTime);
-    }
-
-    private void OnReminderTimeChanged(TimeSpan? value)
-    {
-        reminderTime = value;
-        reminderModel.ReminderDate = CombineDateAndTime(reminderDate, reminderTime);
-    }
-
-    private async Task SubmitAsync()
-    {
-        if (isSubmitting)
+        if (currentKey == _initializationKey)
         {
             return;
         }
 
+        _initializationKey = currentKey;
+
+        selectedForm = string.Equals(InitialType, "reminder", StringComparison.OrdinalIgnoreCase)
+            ? CalendarEntryType.Reminder
+            : CalendarEntryType.Task;
+
+        var defaultStart = baseDate.AddHours(9);
+        var defaultEnd = baseDate.AddHours(10);
+
+        taskModel.Title = string.Empty;
+        taskModel.Description = string.Empty;
+        taskModel.Progress = 0;
+        taskModel.Priority = 0;
+        taskModel.Status = "Not Started";
+        taskModel.Start = defaultStart;
+        taskModel.End = defaultEnd;
+        taskModel.CompletionDate = null;
+
+        reminderModel.Name = string.Empty;
+        reminderModel.Description = string.Empty;
+        reminderModel.IsAcknowledged = false;
+        reminderModel.Priority = 0;
+        reminderModel.ReminderDateTime = defaultStart;
+
+        taskStartInput = ToDateTimeLocalValue(taskModel.Start);
+        taskEndInput = ToDateTimeLocalValue(taskModel.End);
+        taskCompletionInput = string.Empty;
+        reminderDateTimeInput = ToDateTimeLocalValue(reminderModel.ReminderDateTime);
+        errorMessage = null;
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (isSubmitting) return;
         errorMessage = null;
 
         try
@@ -186,13 +212,9 @@
                 _ => null
             };
 
-            if (createdItem is null)
-            {
-                errorMessage = "The item could not be created. Please try again.";
-                return;
-            }
+            if (createdItem is null) return;
 
-            MudDialog.Close(DialogResult.Ok(createdItem));
+            await OnClose.InvokeAsync(createdItem);
         }
         catch (Exception ex)
         {
@@ -212,11 +234,44 @@
             return null;
         }
 
-        taskModel.DueDate = CombineDateAndTime(taskDate, taskTime);
+        if (!TryParseDateTimeLocal(taskStartInput, out var start))
+        {
+            errorMessage = "Task start date and time is required.";
+            return null;
+        }
+
+        if (!TryParseDateTimeLocal(taskEndInput, out var end))
+        {
+            errorMessage = "Task end date and time is required.";
+            return null;
+        }
+
+        if (end <= start)
+        {
+            errorMessage = "Task end must be after task start.";
+            return null;
+        }
+
+        DateTime? completionDate = null;
+        if (!string.IsNullOrWhiteSpace(taskCompletionInput))
+        {
+            if (!TryParseDateTimeLocal(taskCompletionInput, out var parsedCompletion))
+            {
+                errorMessage = "Completion date and time is invalid.";
+                return null;
+            }
+
+            completionDate = parsedCompletion;
+        }
+
+        taskModel.Start = start;
+        taskModel.End = end;
+        taskModel.Priority = Math.Clamp(taskModel.Priority, 0, 3);
+        taskModel.Status = NormalizeTaskStatus(taskModel.Status);
+        taskModel.CompletionDate = completionDate;
         taskModel.EntityType = "TASK";
         taskModel.CreatedAt = DateTime.UtcNow;
         taskModel.UpdatedAt = DateTime.UtcNow;
-
         return await ItemService.CreateItemAsync(taskModel);
     }
 
@@ -228,20 +283,77 @@
             return null;
         }
 
-        reminderModel.ReminderDate = CombineDateAndTime(reminderDate, reminderTime);
+        if (!TryParseDateTimeLocal(reminderDateTimeInput, out var reminderDateTime))
+        {
+            errorMessage = "Reminder date and time is required.";
+            return null;
+        }
+
+        reminderModel.ReminderDateTime = reminderDateTime;
+        reminderModel.Priority = Math.Clamp(reminderModel.Priority, 0, 3);
         reminderModel.EntityType = "REMINDER";
         reminderModel.CreatedAt = DateTime.UtcNow;
         reminderModel.UpdatedAt = DateTime.UtcNow;
-
         return await ItemService.CreateItemAsync(reminderModel);
     }
 
-    private static DateTime CombineDateAndTime(DateTime? date, TimeSpan? time)
+    private static readonly string[] DateTimeLocalFormats =
     {
-        var actualDate = (date ?? DateTime.Today).Date;
-        var actualTime = time ?? TimeSpan.Zero;
-        return actualDate.Add(actualTime);
+        "yyyy-MM-ddTHH:mm",
+        "yyyy-MM-ddTHH:mm:ss",
+        "yyyy-MM-ddTHH:mm:ss.fff",
+    };
+
+    private static string FormatDateTimeLocalValue(object? value)
+    {
+        if (value is DateTime dt)
+            return dt == default ? string.Empty : dt.ToString("yyyy-MM-ddTHH:mm");
+        var s = value?.ToString();
+        return string.IsNullOrWhiteSpace(s) ? string.Empty : s;
     }
 
-    private void Cancel() => MudDialog.Cancel();
+    private static bool TryParseDateTimeLocal(string? value, out DateTime parsed)
+    {
+        parsed = default;
+        if (string.IsNullOrWhiteSpace(value)) return false;
+        if (DateTime.TryParseExact(value, DateTimeLocalFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsed))
+            return true;
+        // Fallback for any other format the browser may send.
+        return DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsed);
+    }
+
+    private static string ToDateTimeLocalValue(DateTime value)
+        => value == default ? string.Empty : value.ToString("yyyy-MM-ddTHH:mm");
+
+    private static string NormalizeTaskStatus(string? status)
+    {
+        return status?.Trim() switch
+        {
+            "Not Started" => "Not Started",
+            "In Progress" => "In Progress",
+            "Completed" => "Completed",
+            "Halted" => "Halted",
+            "Hiatus" => "Hiatus",
+            _ => "Not Started"
+        };
+    }
+
+    private static readonly (int Value, string Label)[] PriorityOptions =
+    {
+        (0, "No Priority"),
+        (1, "Low Priority (Green)"),
+        (2, "Medium Priority (Yellow)"),
+        (3, "High Priority (Red)")
+    };
+
+    private static readonly string[] TaskStatusOptions =
+    {
+        "Not Started",
+        "In Progress",
+        "Completed",
+        "Halted",
+        "Hiatus"
+    };
+
+    private async Task Cancel() => await OnClose.InvokeAsync(null);
 }

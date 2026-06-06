@@ -1,0 +1,197 @@
+@page "/projects/{projectId}"
+@layout MainLayout
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@inject ProjectService ProjectService
+@inject Microsoft.JSInterop.IJSRuntime JS
+
+<PageTitle>@Project?.Name</PageTitle>
+
+<div class="projectx-page">
+    <div class="projectx-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h1 class="m-0">@Project?.Name</h1>
+            @if (Project is not null)
+            {
+                <div class="mini-text">FROM @Project.Start.ToString("MMM dd, yyyy") TO @Project.End.ToString("MMM dd, yyyy")
+                </div>
+            }
+        </div>
+        <div>@Project?.Description</div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="button" class="icon-btn-project icon-btn" aria-label="Create phase" title="Create phase"
+                @onclick="OpenCreatePhaseDialogAsync">
+            <div style="font-size: 150%;">
+                <Blazicon Svg="Lucide.Plus" />
+            </div>
+        </button>
+
+        <button type="button" class="icon-btn-project icon-btn" aria-label="Edit project" title="Edit project"
+                @onclick="OpenEditDialogAsync">
+            <div style="font-size: 150%;">
+                <Blazicon Svg="Lucide.Pen" />
+            </div>
+        </button>
+    </div>
+
+    <div class="timeline-view-switcher" role="group" aria-label="Timeline view mode">
+        <button type="button"
+                class="timeline-view-button @(ActiveTimelineView == TimelineViewMode.Daily ? "is-active" : null)"
+                @onclick="() => SetTimelineView(TimelineViewMode.Daily)">
+            Daily
+        </button>
+        <button type="button"
+                class="timeline-view-button @(ActiveTimelineView == TimelineViewMode.Weekly ? "is-active" : null)"
+                @onclick="() => SetTimelineView(TimelineViewMode.Weekly)">
+            Weekly
+        </button>
+        <button type="button"
+                class="timeline-view-button @(ActiveTimelineView == TimelineViewMode.Monthly ? "is-active" : null)"
+                @onclick="() => SetTimelineView(TimelineViewMode.Monthly)">
+            Monthly
+        </button>
+    </div>
+
+    @if (Project is null)
+    {
+        <div class="projectx-empty-state">Loading project timeline...</div>
+    }
+    else if (Project.Phases.Count == 0)
+    {
+        <div class="projectx-empty-state">No phases available yet. Create one to start building the timeline.</div>
+    }
+    else
+    {
+        <section class="timeline-board">
+            <div class="timeline-layout">
+                <div class="timeline-left-panel">
+                    <div class="timeline-side-header">
+
+                    </div>
+
+                    @for (var phaseIndex = 0; phaseIndex < Project.Phases.Count; phaseIndex++)
+                    {
+                        var phase = Project.Phases[phaseIndex];
+                        var phaseColor = GetPhaseColor(phaseIndex);
+                        var trackHeight = GetTrackHeight(phase);
+                        var phaseTaskCount = phase.Tasks?.Count ?? 0;
+                        var completedTaskCount = phase.Tasks?.Count(task => string.Equals(task.Status, "Completed",
+                StringComparison.OrdinalIgnoreCase)) ?? 0;
+
+                        <div class="timeline-phase-meta" style="@GetMinHeightStyle(trackHeight)">
+                            <div class="timeline-phase-overview">
+                                <div>
+                                    <div class="timeline-phase-kicker">Phase @(phaseIndex + 1)</div>
+                                    <h3>@phase.Name</h3>
+                                </div>
+                                <div class="timeline-phase-progress" style="color:@phaseColor">
+                                    <span>@GetCompletionPercentageText(completedTaskCount, phaseTaskCount)</span>
+                                    <div class="mini-text">@completedTaskCount/@phaseTaskCount TASKS</div>
+                                </div>
+                            </div>
+
+                            @* <div class="timeline-phase-description">@(!string.IsNullOrWhiteSpace(phase.Description) ?
+                                                        phase.Description : "No description")</div> *@
+
+                    <div class="timeline-phase-actions">
+                        <button type="button" class="timeline-action-button" aria-label="Add task" title="Add task"
+                                @onclick="() => OpenAddPhaseTaskDialogAsync(phase)">
+                            <Blazicon Svg="Lucide.Plus" />
+                        </button>
+                        <button type="button" class="timeline-action-button" aria-label="Edit phase" title="Edit phase"
+                                @onclick="() => OpenPhaseEditor(phase)">
+                            <Blazicon Svg="Lucide.Pen" />
+                        </button>
+                    </div>
+
+                    <div class="timeline-phase-range">@FormatDateRange(phase.Start, phase.End)</div>
+
+                    @if (phase.Tasks is not null && phase.Tasks.Count > 0)
+                    {
+                        @for (var taskIndex = 0; taskIndex < phase.Tasks.Count; taskIndex++)
+                        {
+                            var task = phase.Tasks[taskIndex];
+
+                            <div class="timeline-task-meta" style="@GetMinHeightStyle(TaskRowHeight)">
+                                <div class="timeline-task-title-row">
+                                    <div class="timeline-task-title">@task.Title</div>
+                                    <div class="timeline-task-status @GetTaskStatusClass(task.Status)">
+                                        @GetTaskStatusLabel(task.Status)</div>
+                                    </div>
+                                    <div class="timeline-task-dates">@FormatTaskDateRange(task, phase)</div>
+                                </div>
+                            }
+                        }
+                            else
+                        {
+                            <div class="timeline-task-meta timeline-task-empty" style="@GetMinHeightStyle(TaskRowHeight)">
+                                No tasks yet for this phase.
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="timeline-scroll-region" @ref="timelineBoardRef">
+
+                @* THE ACTUAL TIMELINE HEADER *@
+                <div class="timeline-header-track" style="@GetHeaderTrackStyle()">
+                    @foreach (var unit in TimelineHeaderUnits)
+                    {
+                        <div class="timeline-header-unit @(unit.ContainsToday ? "is-today" : null)"
+                             style="@GetHeaderUnitStyle(unit.WidthPx)">
+                            <h6 class="">@unit.PrimaryLabel</h6>
+                            <span class="timeline-unit-secondary">@unit.SecondaryLabel</span>
+                        </div>
+                    }
+                </div>
+
+                @* THE PHASES ON THE LEFT AND GANTT TRACKS ON THE RIGHT ARE IN SYNC, THEY ARE JUST OVERLAID WITH ABSOLUTE POSITIONING. THIS ALLOWS US TO HAVE THE PHASE AND TASK METADATA ALWAYS VISIBLE ON THE LEFT, WHILE THE TIMELINE ITSELF CAN SCROLL INDEPENDENTLY ON THE RIGHT. *@
+                @for (var phaseIndex = 0; phaseIndex < Project.Phases.Count; phaseIndex++)
+                {
+                    var phase = Project.Phases[phaseIndex];
+                    var phaseColor = GetPhaseColor(phaseIndex);
+                    var trackHeight = GetTrackHeight(phase);
+
+                    <div class="timeline-track-shell" style="@GetMinHeightStyle(trackHeight)">
+                        <div class="timeline-track-canvas" style="@GetTrackCanvasStyle(trackHeight, phaseColor)">
+                            <div class="timeline-today-marker" style="@GetTodayMarkerStyle()"></div>
+                            <div class="phase-bar" style="@GetPhaseStyle(phase, phaseIndex)"></div>
+
+                            @if (phase.Tasks is not null && phase.Tasks.Count > 0)
+                            {
+                                @for (var taskIndex = 0; taskIndex < phase.Tasks.Count; taskIndex++)
+                                {
+                                    var task = phase.Tasks[taskIndex];
+
+                                    <div class="task-bar @GetTaskStatusClass(task.Status)"
+                                         style="@GetTaskStyle(task, phase, phaseColor, taskIndex)">
+                                        <span>@task.Title</span>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </section>
+
+    <div class="timeline-floating-nav" role="group" aria-label="Timeline navigation">
+        <button type="button" class="timeline-floating-nav-btn" aria-label="Scroll to previous dates"
+                title="Previous dates" @onclick="ScrollTimelineLeftAsync">
+            <Blazicon Svg="Lucide.ChevronLeft" />
+        </button>
+        <button type="button" class="timeline-floating-nav-btn" aria-label="Scroll to next dates" title="Next dates"
+                @onclick="ScrollTimelineRightAsync">
+            <Blazicon Svg="Lucide.ChevronRight" />
+        </button>
+    </div>
+}
+</div>
+
+<PhaseDialog IsVisible="@createPhaseDialogVisible" OnClose="OnCreatePhaseDialogClosedAsync" ProjectId="@ProjectId" />
+<EditProjectDialog IsVisible="@editDialogVisible" OnClose="OnEditDialogClosedAsync" Project="@Project" />
+<EditPhaseDialog IsVisible="@editPhaseDialogVisible" OnClose="OnEditPhaseDialogClosedAsync" Phase="@SelectedPhase" />
+<AddPhaseTaskDialog IsVisible="@addPhaseTaskDialogVisible" OnClose="OnAddPhaseTaskDialogClosedAsync"    Phase="@SelectedPhase" />

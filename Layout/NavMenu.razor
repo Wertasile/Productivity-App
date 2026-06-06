@@ -1,145 +1,163 @@
 @using System.Security.Claims
+@using Blazicons
 @using Microsoft.AspNetCore.Components.Authorization
 @using MudBlazor
 @inject AuthService AuthService
 @inject IDialogService DialogService
 @inject NavigationManager Navigation
 
-<MudDrawer @bind-Open="_open"
-           Fixed="true"
-           Elevation="0"
-           Variant="DrawerVariant.Persistent"
-           Breakpoint="Breakpoint.None"
-           OpenMiniOnHover="false"
-           Class="app-sidebar"
->
+<aside
+    class="sidebar-shell @(sidebarCollapsed ? "sidebar-shell--collapsed" : "") d-flex flex-column justify-content-between">
     <div class="sidebar-top">
         <div class="sidebar-header">
-                <div class="">ProdPadre</div>
+            <button type="button" class="sidebar-toggle-btn" @onclick="ToggleSidebar"
+                    aria-label="@(sidebarCollapsed ? "Expand navigation" : "Collapse navigation")"
+                    title="@(sidebarCollapsed ? "Expand navigation" : "Collapse navigation")">
+                <Blazicon Svg="@SidebarToggleIcon" />
+            </button>
+            <h2 class="sidebar-label">ProdPadre</h2>
         </div>
 
-        <div class="sidebar-actions" aria-label="Quick create">
-            <div>
+
+        <div class="d-flex flex-column gap-2">
+            <div class="d-flex gap-2 justify-content-center">
                 <button type="button"
-                        class="sidebar-action-circle sidebar-action-circle-task"
+                        class="icon-btn-task icon-btn"
                         aria-label="Create task"
                         title="Create task"
                         @onclick='() => OpenCreateDialogAsync("task")'>
-                    // ICONS PACK
-                    t
+                        <div style="font-size: 150%;">
+                            <Blazicon Svg="Lucide.AlarmClockPlus" />
+                        </div>
                 </button>
 
                 <button type="button"
-                        class="sidebar-action-circle sidebar-action-circle-reminder"
+                        class="icon-btn-reminder icon-btn"
+                        style="@(sidebarCollapsed ? "display: none;" : "")"
                         aria-label="Create reminder"
                         title="Create reminder"
                         @onclick='() => OpenCreateDialogAsync("reminder")'>
-                    // ICONS PACK
-                    r
+                        <div style="font-size: 150%;">
+                            <Blazicon Svg="Lucide.BellPlus" />
+                        </div>
                 </button>
-                <div class="sidebar-cta-wrap">
-                    <button type="button" class="sidebar-cta-btn" @onclick="OpenNewNote">
-                        <span class="sidebar-cta-icon">+</span>
-                        <span>New Note</span>
-                    </button>
-                </div>
             </div>
-
+            <div>
+                <button type="button" class="@(sidebarCollapsed ? "icon-btn icon-btn-primary" : "primary-btn")" style="@(sidebarCollapsed ? "width: 48px; min-width: 0;" : "width: 100%;")" @onclick="OpenNewNote">
+                    + <span class="text">New Note</span>
+                </button>
+            </div>
         </div>
-
-
 
         <nav class="sidebar-nav" aria-label="Primary">
-            <NavLink href="/dashboard" class="sidebar-nav-link" Match="NavLinkMatch.All">
-                <span class="sidebar-nav-icon">
-                    // ICONS PACK
+            <a href="/dashboard" class="sidebar-nav-link @(selectedPage == "Home" ? "fw-bold" : "")"
+               Match="NavLinkMatch.All" @onclick='() => SelectPage("Home")'>
+                <span class="sidebar-nav-icon" aria-hidden="true">
+                    <Blazicon Svg="Lucide.House" />
                 </span>
-                <span>Home</span>
-            </NavLink>
+                <span class="sidebar-label">Home</span>
+            </a>
 
-            <NavLink href="/journal" class="sidebar-nav-link">
-                <span class="sidebar-nav-icon">
-                    // ICONS PACK
+            <a href="/journal" class="sidebar-nav-link @(selectedPage == "Journal" ? "fw-bold" : "")"
+               @onclick='() => SelectPage("Journal")'>
+                <span class="sidebar-nav-icon" aria-hidden="true">
+                    <Blazicon Svg="Lucide.BookOpen" />
                 </span>
-                <span>Journal</span>
-            </NavLink>
+                <span class="sidebar-label">Journal</span>
+            </a>
 
-            <NavLink href="/calendar" class="sidebar-nav-link">
-                <span class="sidebar-nav-icon">
-                    // ICONS PACK
+            <a href="/calendar" class="sidebar-nav-link @(selectedPage == "Calendar" ? "fw-bold" : "")"
+               @onclick='() => SelectPage("Calendar")'>
+                <span class="sidebar-nav-icon" aria-hidden="true">
+                    <Blazicon Svg="Lucide.Calendar" />
                 </span>
-                <span>Calendar</span>
-            </NavLink>
+                <span class="sidebar-label">Calendar</span>
+            </a>
 
-            <NavLink href="/directory" class="sidebar-nav-link">
-                <span class="sidebar-nav-icon">
-                    // ICONS PACK
+            <a href="/library" class="sidebar-nav-link @(selectedPage == "Library" ? "fw-bold" : "")"
+               @onclick='() => SelectPage("Library")'>
+                <span class="sidebar-nav-icon" aria-hidden="true">
+                    <Blazicon Svg="Lucide.Folder" />
                 </span>
-                <span>Library</span>
-            </NavLink>
+                <span class="sidebar-label">Library</span>
+            </a>
 
-            <NavLink href="/archive" class="sidebar-nav-link">
-                <span class="sidebar-nav-icon">
-                    // ICONS PACK 
+            <a href="/projects" class="sidebar-nav-link @(selectedPage == "Project" ? "fw-bold" : "")"
+               @onclick='() => SelectPage("Project")'>
+                <span class="sidebar-nav-icon" aria-hidden="true">
+                    <Blazicon Svg="Lucide.Layers" />
                 </span>
-                <span>Archive</span>
-            </NavLink>
+                <span class="sidebar-label">Projects</span>
+            </a>
 
-            <NavLink href="/settings" class="sidebar-nav-link">
-                <span class="sidebar-nav-icon">
-                    // ICONS PACK
+            <a href="/habits" class="sidebar-nav-link @(selectedPage == "Habits" ? "fw-bold" : "")"
+               @onclick='() => SelectPage("Habits")'>
+                <span class="sidebar-nav-icon" aria-hidden="true">
+                    <Blazicon Svg="Lucide.Dumbbell" />
                 </span>
-                <span>Settings</span>
-            </NavLink>
+                <span class="sidebar-label">Habits</span>
+            </a>
+
+            <a href="/payments" class="sidebar-nav-link @(selectedPage == "Payments" ? "fw-bold" : "")"
+               @onclick='() => SelectPage("Payments")'>
+                <span class="sidebar-nav-icon" aria-hidden="true">
+                    <Blazicon Svg="Lucide.CreditCard" />
+                </span>
+                <span class="sidebar-label">Payments</span>
+            </a>
+
+            <a href="/settings" class="sidebar-nav-link @(selectedPage == "Settings" ? "fw-bold" : "")"
+               @onclick='() => SelectPage("Settings")'>
+                <span class="sidebar-nav-icon" aria-hidden="true">
+                    <Blazicon Svg="Lucide.Settings" />
+                </span>
+                <span class="sidebar-label">Settings</span>
+            </a>
         </nav>
-
-        <div class="sidebar-footer">
-            <button type="button" class="sidebar-session-btn" @onclick="HandleSessionActionAsync">
-                <span class="sidebar-session-icon">
-                    @if (showSignIn)
-                    {
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M14 5h4.5A1.5 1.5 0 0 1 20 6.5v11a1.5 1.5 0 0 1-1.5 1.5H14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path>
-                            <path d="M11 8.2 14.8 12 11 15.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path>
-                            <path d="M4.5 12h10.1" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path>
-                        </svg>
-                    }
-                    else
-                    {
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M10 5H5.5A1.5 1.5 0 0 0 4 6.5v11A1.5 1.5 0 0 0 5.5 19H10" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path>
-                            <path d="M13 8.2 9.2 12 13 15.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path>
-                            <path d="M19.5 12H9.4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path>
-                        </svg>
-                    }
-                </span>
-                <span>@sessionActionLabel</span>
-            </button>
-
-            <div class="sidebar-account-card">
-                <div class="profile-avatar">@profileInitials</div>
-                <div class="profile-copy">
-                    <div class="profile-name">@profileName</div>
-                    <div class="profile-role">@profileMeta</div>
-                </div>
-            </div>
-        </div>
     </div>
-</MudDrawer>
+    <div class="sidebar-footer">
+        <div class="sidebar-nav-link sidebar-session-btn" @onclick="HandleSessionActionAsync"
+                aria-label="@sessionActionLabel" title="@sessionActionLabel">
+            @if (showSignIn)
+            {
+                <span class="sidebar-nav-icon" aria-hidden="true">
+                    <Blazicon Svg="Lucide.LogIn" />
+                </span>
+            }
+            else
+            {
+                <span class="sidebar-nav-icon" aria-hidden="true">
+                    <Blazicon Svg="Lucide.LogOut" />
+                </span>
+            }
+            <span class="sidebar-label">@sessionActionLabel</span>
+        </div>
+
+        @* <div class="sidebar-account-card">
+            <div class="profile-avatar">@profileInitials</div>
+            <div class="profile-copy">
+                <div class="profile-name">@profileName</div>
+                <div class="profile-role">@profileMeta</div>
+            </div>
+        </div> *@
+    </div>
+</aside>
 
 @code {
     [CascadingParameter]
     private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
 
-    private bool _open = true;
+    private bool sidebarCollapsed;
     private bool isGuestMode;
     private bool isAuthenticated;
+    private string selectedPage = "Home";
     private string profileName = "Guest Account";
     private string profileMeta = "LOCAL SESSION";
     private string profileInitials = "G";
 
     private bool showSignIn => isGuestMode || !isAuthenticated;
     private string sessionActionLabel => showSignIn ? "Sign In" : "Sign Out";
+    private Blazicons.SvgIcon SidebarToggleIcon => sidebarCollapsed ? Lucide.ChevronRight : Lucide.ChevronLeft;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -148,31 +166,35 @@
             : await AuthenticationStateTask;
 
         var user = authState.User;
+
         isAuthenticated = user.Identity?.IsAuthenticated == true;
         isGuestMode = string.Equals(user.FindFirst("auth_mode")?.Value, "guest", StringComparison.OrdinalIgnoreCase);
 
         if (showSignIn)
         {
-            profileName = "Guest Account";
+            profileName = "Local Account";
             profileMeta = "LOCAL SESSION";
-            profileInitials = "G";
+            profileInitials = "L";
             return;
         }
 
-        profileName =
-            user.FindFirst(ClaimTypes.Name)?.Value ??
-            user.FindFirst("name")?.Value ??
-            user.FindFirst("cognito:username")?.Value ??
-            user.FindFirst("username")?.Value ??
+        var email =
             user.FindFirst(ClaimTypes.Email)?.Value ??
-            "Account";
+            user.FindFirst("email")?.Value;
 
-        profileMeta =
-            user.FindFirst(ClaimTypes.Email)?.Value ??
-            user.FindFirst("email")?.Value ??
-            "SIGNED IN";
+        profileName = email ?? "Account";
+        profileMeta = "SIGNED IN";
+        profileInitials = GetInitials(email ?? "Account");
+    }
 
-        profileInitials = GetInitials(profileName);
+    private void ToggleSidebar()
+    {
+        sidebarCollapsed = !sidebarCollapsed;
+    }
+
+    private void SelectPage(string page)
+    {
+        selectedPage = page;
     }
 
     private async Task OpenCreateDialogAsync(string initialType)

@@ -39,7 +39,7 @@ public class NoteService
             return state.Notes.FirstOrDefault(note => note.Id == id.ToString()) ?? new Note();
         }
 
-        return await _httpClient.GetFromJsonAsync<Note>($"notes/{id}") ?? new Note();
+        return await _httpClient.GetFromJsonAsync<Note>($"Prod/notes/{id}") ?? new Note();
     }
 
     public async Task<Note?> CreateNote(Note note)
@@ -65,7 +65,7 @@ public class NoteService
             });
         }
 
-        var response = await _httpClient.PostAsJsonAsync("note/", note);
+        var response = await _httpClient.PostAsJsonAsync("Prod/note/", note);
         if (!response.IsSuccessStatusCode)
         {
             throw new Exception($"Failed to create Note : {response.StatusCode}");

@@ -2,16 +2,16 @@
 @using MudBlazor
 
 @* Required *@
-<MudThemeProvider />
-<MudPopoverProvider />
+@* <MudThemeProvider />
+<MudPopoverProvider /> *@
 
 @* Needed for dialogs *@
-<MudDialogProvider NoHeader="true" CloseButton="true" CloseOnEscapeKey="true"/>
+@* <MudDialogProvider NoHeader="true" CloseButton="true" CloseOnEscapeKey="true"/> *@
 
 @* Needed for snackbars *@
-<MudSnackbarProvider />
+@* <MudSnackbarProvider /> *@
 
-<MudLayout>
+@* <MudLayout>
 
     <NavMenu />
 
@@ -21,15 +21,15 @@
         </div>
     </MudMainContent>
 
-</MudLayout>
-@* <div class="page">
+</MudLayout> *@
+<div class="page">
     <div class="">
         <NavMenu />
     </div>
 
     <main>
-        <article class="content px-4">
+        <article class="content">
             @Body
         </article>
     </main>
-</div> *@
+</div>

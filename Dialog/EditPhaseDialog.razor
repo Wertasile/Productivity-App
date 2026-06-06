@@ -1,0 +1,228 @@
+@using System.Globalization
+@inject ProjectService ProjectService
+
+@if (IsVisible)
+{
+    <div class="cd-backdrop" @onclick="Cancel"></div>
+
+    <div class="cd-panel" role="dialog" aria-modal="true" aria-labelledby="et-title">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2 id="et-title">Edit Phase</h2>
+            <button @onclick="Cancel" aria-label="Close">
+                <Blazicon Svg="Lucide.X" />
+            </button>
+        </div>
+
+        <div class="d-flex flex-column gap-6">
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <div class="cd-error" role="alert">@errorMessage</div>
+            }
+
+            <div class="cd-form">
+                <div class="cd-field">
+                    <label for="et-title-input">Title <span class="cd-required">*</span></label>
+                    <input id="et-title-input" type="text" placeholder="Phase title" @bind="editModel.Name"
+                           @bind:event="oninput" />
+                </div>
+
+                <div class="cd-field">
+                    <label for="et-desc">Description</label>
+                    <textarea id="et-desc" placeholder="Optional description" rows="4" @bind="editModel.Description"
+                              @bind:event="oninput"></textarea>
+                </div>
+
+                <div class="cd-field">
+                    <label for="et-start">Start <span class="cd-required">*</span></label>
+                    <input id="et-start" type="datetime-local" value="@taskStartInput"
+                           @onchange="e => taskStartInput = FormatDateTimeLocalValue(e.Value)" />
+                </div>
+
+                <div class="cd-field">
+                    <label for="et-end">End <span class="cd-required">*</span></label>
+                    <input id="et-end" type="datetime-local" value="@taskEndInput"
+                           @onchange="e => taskEndInput = FormatDateTimeLocalValue(e.Value)" />
+                </div>
+
+                <div class="cd-field">
+                    <label for="et-completion">Completion DateTime</label>
+                    <input id="et-completion" type="datetime-local" value="@completionDateInput"
+                           @onchange="e => completionDateInput = FormatDateTimeLocalValue(e.Value)" />
+                </div>
+            </div>
+
+            <div class="cd-footer d-flex justify-content-between align-items-center">
+                <button style="color: #C53030;" @onclick="DeleteAsync" disabled="@isSubmitting">
+                    <Blazicon Svg="Lucide.Trash" />
+                </button>
+                <div class="d-flex gap-2">
+                    <button class="secondary-btn" @onclick="Cancel" disabled="@isSubmitting">Cancel</button>
+                    <button class="primary-btn" @onclick="SubmitAsync" disabled="@isSubmitting">
+                        @(isSubmitting ? "Saving…" : "Save")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public Phase Phase { get; set; } = new();
+    [Parameter] public EventCallback<bool> OnClose { get; set; }
+
+    private readonly Phase editModel = new();
+    private string taskStartInput = string.Empty;
+    private string taskEndInput = string.Empty;
+    private string completionDateInput = string.Empty;
+    private bool isSubmitting;
+    private string? errorMessage;
+    private string _lastId = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        if (!IsVisible)
+        {
+            _lastId = string.Empty;
+            return;
+        }
+
+        var currentId = Phase.Id ?? string.Empty;
+        if (currentId == _lastId) return;
+
+        _lastId = currentId;
+        errorMessage = null;
+
+        editModel.Id = Phase.Id;
+        editModel.Name = Phase.Name;
+        editModel.Description = Phase.Description;
+        editModel.Start = Phase.Start;
+        editModel.End = Phase.End;
+        editModel.CreatedAt = Phase.CreatedAt;
+        editModel.UpdatedAt = Phase.UpdatedAt;
+
+        taskStartInput = ToDateTimeLocalValue(editModel.Start);
+        taskEndInput = ToDateTimeLocalValue(editModel.End);
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (isSubmitting) return;
+
+        if (string.IsNullOrWhiteSpace(editModel.Name))
+        {
+            errorMessage = "Phase name is required.";
+            return;
+        }
+
+        errorMessage = null;
+
+        try
+        {
+            isSubmitting = true;
+
+            if (!TryParseDateTimeLocal(taskStartInput, out var start))
+            {
+                errorMessage = "Phase start date and time is required.";
+                return;
+            }
+
+            if (!TryParseDateTimeLocal(taskEndInput, out var end))
+            {
+                errorMessage = "Phase end date and time is required.";
+                return;
+            }
+
+            if (end <= start)
+            {
+                errorMessage = "Phase end must be after phase start.";
+                return;
+            }
+
+            DateTime? completionDate = null;
+            if (!string.IsNullOrWhiteSpace(completionDateInput))
+            {
+                if (!TryParseDateTimeLocal(completionDateInput, out var parsedCompletion))
+                {
+                    errorMessage = "Completion date and time is invalid.";
+                    return;
+                }
+
+                completionDate = parsedCompletion;
+            }
+
+            editModel.Start = start;
+            editModel.End = end;
+            editModel.UpdatedAt = DateTime.UtcNow;
+
+            var updatedItem = await ProjectService.UpdatePhase(editModel);
+
+            if (updatedItem is null)
+            {
+                errorMessage = "The phase could not be updated.";
+                return;
+            }
+
+            await OnClose.InvokeAsync(true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (isSubmitting) return;
+
+        try
+        {
+            isSubmitting = true;
+            await ProjectService.DeletePhase(editModel.Id);
+            await OnClose.InvokeAsync(true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task Cancel() => await OnClose.InvokeAsync(false);
+
+    private static readonly string[] DateTimeLocalFormats =
+    {
+        "yyyy-MM-ddTHH:mm",
+        "yyyy-MM-ddTHH:mm:ss",
+        "yyyy-MM-ddTHH:mm:ss.fff",
+    };
+
+    private static string FormatDateTimeLocalValue(object? value)
+    {
+        if (value is DateTime dt)
+            return dt == default ? string.Empty : dt.ToString("yyyy-MM-ddTHH:mm");
+        var s = value?.ToString();
+        return string.IsNullOrWhiteSpace(s) ? string.Empty : s;
+    }
+
+    private static bool TryParseDateTimeLocal(string? value, out DateTime parsed)
+    {
+        parsed = default;
+        if (string.IsNullOrWhiteSpace(value)) return false;
+        if (DateTime.TryParseExact(value, DateTimeLocalFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsed))
+            return true;
+        // Fallback for any other format the browser may send.
+        return DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsed);
+    }
+
+    private static string ToDateTimeLocalValue(DateTime value)
+        => value == default ? string.Empty : value.ToString("yyyy-MM-ddTHH:mm");
+
+}

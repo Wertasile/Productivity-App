@@ -16,38 +16,83 @@ public class CalendarService
         _localAppStateStore = localAppStateStore;
     }
 
-    public async Task<CalendarResponse> GetMonthAsync(DateTime? month = null)
+public async Task<CalendarResponse> GetMonthAsync(DateTime? month = null, int monthOffset = 0)
+{
+    if (await IsGuestModeAsync())
     {
-        if (await IsGuestModeAsync())
+        var currentMonth = month ?? DateTime.Today;
+
+        var firstDayOfMonth = new DateTime(currentMonth.Year, currentMonth.Month, 1);
+
+        var diff = (7 + (firstDayOfMonth.DayOfWeek - DayOfWeek.Monday)) % 7;
+        var startDate = firstDayOfMonth.AddDays(-diff).Date;
+        var endDate = startDate.AddDays(41).Date;
+
+        var state = await _localAppStateStore.GetStateAsync();
+        var response = new CalendarResponse();
+
+        foreach (var note in state.Notes)
         {
-            var currentMonth = month ?? DateTime.Today;
-            var firstDayOfMonth = new DateTime(currentMonth.Year, currentMonth.Month, 1);
-            var diff = (7 + (firstDayOfMonth.DayOfWeek - DayOfWeek.Monday)) % 7;
-            var startDate = firstDayOfMonth.AddDays(-diff).Date;
-            var endDate = startDate.AddDays(41).Date;
-            var state = await _localAppStateStore.GetStateAsync();
-            var response = new CalendarResponse();
-
-            foreach (var note in state.Notes)
-            {
-                AddToCalendar(response, note.UpdatedAt, item => item.Notes.Add(note), startDate, endDate);
-            }
-
-            foreach (var reminder in state.Reminders)
-            {
-                AddToCalendar(response, reminder.ReminderDate, item => item.Reminders.Add(reminder), startDate, endDate);
-            }
-
-            foreach (var task in state.Tasks)
-            {
-                AddToCalendar(response, task.DueDate, item => item.Tasks.Add(task), startDate, endDate);
-            }
-
-            return response;
+            AddToCalendar(
+                response,
+                note.UpdatedAt,
+                item => item.Notes.Add(note),
+                startDate,
+                endDate
+            );
         }
 
-        return await _httpClient.GetFromJsonAsync<CalendarResponse>("Prod/calendar/month") ?? new CalendarResponse();
+        foreach (var reminder in state.Reminders)
+        {
+            var reminderDate = reminder.ReminderDateTime;
+
+            AddToCalendar(
+                response,
+                reminderDate,
+                item => item.Reminders.Add(reminder),
+                startDate,
+                endDate
+            );
+        }
+
+        foreach (var task in state.Tasks)
+        {
+            // Normalize task dates (core fix)
+            var taskDate = task.Start != default
+                ? task.Start
+                : task.End;
+
+            if (taskDate == default)
+            {
+                // fallback safety (prevents 0001-01-01 bugs)
+                taskDate = DateTime.Today;
+            }
+
+            task.Start = taskDate;
+
+            if (task.End == default)
+            {
+                task.End = taskDate;
+            }
+
+            AddToCalendar(
+                response,
+                taskDate,
+                item => item.Tasks.Add(task),
+                startDate,
+                endDate
+            );
+        }
+
+        return response;
     }
+
+    // API mode (assumes backend is already correct)
+    return await _httpClient.GetFromJsonAsync<CalendarResponse>(
+        $"Prod/calendar/month?monthOffset={monthOffset}"
+    ) ?? new CalendarResponse();
+}
+
 
     public async Task<DayResponse> GetDayAsync(DateTime? day = null)
     {
@@ -59,8 +104,8 @@ public class CalendarService
             return new DayResponse
             {
                 Notes = state.Notes.Where(note => note.UpdatedAt.Date == selectedDay).ToList(),
-                Reminders = state.Reminders.Where(reminder => reminder.ReminderDate.Date == selectedDay).ToList(),
-                Tasks = new List<Task>()
+                Reminders = state.Reminders.Where(reminder => reminder.ReminderDateTime.Date == selectedDay).ToList(),
+                Tasks = new List<TaskItem>()
             };
         }
 
@@ -68,7 +113,7 @@ public class CalendarService
         {
             Notes = new List<Note>(),
             Reminders = new List<Reminder>(),
-            Tasks = new List<Task>()
+            Tasks = new List<TaskItem>()
         };
     }
 
@@ -84,6 +129,7 @@ public class CalendarService
         DateTime startDate,
         DateTime endDate)
     {
+        
         var day = date.Date;
 
         if (day < startDate || day > endDate)

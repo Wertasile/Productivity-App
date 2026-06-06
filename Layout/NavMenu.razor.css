@@ -1,33 +1,22 @@
-.app-sidebar .mud-drawer-paper {
+::deep .mud-drawer, .app-sidebar, aside, .sidebar-shell {
     border: none;
     box-shadow: none;
     padding: 0;
-    background:
-        radial-gradient(circle at top right, rgba(255, 255, 255, 0.28), transparent 32%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0)),
-        #e4e4d1;
-    width: 300px;
-    color: #37392c;
-}
-
-.sidebar-shell {
+    background-color: #E4E4D1;
+    width: 250px;
+    max-width: 250px;
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    padding: 46px 34px 30px 42px;
-    position: relative;
+    padding: 32px 24px;
+    transition: width 0.2s ease, padding 0.2s ease;
 }
 
-.sidebar-shell::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    opacity: 0.025;
-    background-image:
-        radial-gradient(circle at 20% 20%, #37392c 0.7px, transparent 0.8px),
-        radial-gradient(circle at 80% 60%, #37392c 0.6px, transparent 0.7px);
-    background-size: 18px 18px, 22px 22px;
+.sidebar-shell--collapsed {
+    width: 92px;
+    max-width: 92px;
+    padding: 24px 12px;
+    align-items: center;
 }
 
 .sidebar-top,
@@ -40,7 +29,69 @@
 }
 
 .sidebar-top {
-    margin-bottom: 48px;
+    display: flex;
+    flex-direction: column;
+    gap:32px;
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sidebar-shell--collapsed .sidebar-header {
+    justify-content: center;
+}
+
+.sidebar-toggle-btn {
+    border: none;
+    background: rgba(255, 255, 255, 0.35);
+    color: #3f402f;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sidebar-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.55);
+    transform: translateY(-1px);
+    box-shadow: 0 10px 18px rgba(55, 57, 44, 0.08);
+}
+
+.sidebar-toggle-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+.sidebar-quick-create {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+.sidebar-shell-collapsed .primary-btn{
+    min-width: 0;
+}
+
+.sidebar-shell--collapsed .text{
+    display: none;
+}
+
+.sidebar-label {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+}
+
+.sidebar-shell--collapsed .sidebar-label {
+    display: none;
 }
 
 .brand-copy {
@@ -48,174 +99,62 @@
     flex-direction: column;
 }
 
-.brand-name {
-    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
-    font-weight: 700;
-    font-size: 3.15rem;
-    line-height: 0.92;
-    color: #7a7340;
-    letter-spacing: -0.03em;
-}
-
-.sidebar-actions {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 28px;
-}
-
-.sidebar-action-circle {
-    width: 84px;
-    height: 84px;
-    border-radius: 999px;
-    border: 2px solid currentColor;
-    background: rgba(255, 255, 255, 0.16);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    transition: transform 0.2s ease, background-color 0.2s ease;
-}
-
-.sidebar-action-circle:hover {
-    transform: translateY(-2px);
-    background: rgba(255, 255, 255, 0.24);
-}
-
-.sidebar-action-circle svg {
-    width: 42px;
-    height: 42px;
-}
-
-.sidebar-action-circle-task {
-    color: #504bef;
-}
-
-.sidebar-action-circle-reminder {
-    color: #f67adf;
-}
-
-.sidebar-cta-wrap {
-    margin-bottom: 54px;
-}
-
-.sidebar-cta-btn {
-    width: 100%;
-    min-height: 96px;
-    border: 0;
-    border-radius: 999px;
-    background: linear-gradient(180deg, #7a7543 0%, #6d693d 100%);
-    color: #fffdf5;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    font-family: Manrope, 'Segoe UI', sans-serif;
-    font-size: 1.25rem;
-    font-weight: 500;
-    letter-spacing: 0;
-    transform: translateX(0);
-    transition: transform 0.2s ease, filter 0.2s ease;
-}
-
-.sidebar-cta-btn:hover {
-    transform: translate(2px, 2px);
-    filter: brightness(0.98);
-}
-
-.sidebar-cta-icon {
-    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
-    font-size: 2.6rem;
-    line-height: 1;
-    font-weight: 400;
-}
 
 .sidebar-nav {
-    display: grid;
-    gap: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
 .sidebar-nav-link {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 18px;
-    padding: 10px 6px;
-    color: #837d70;
+    gap: 16px;
+    padding: 12px 10px;
+    border: none;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
     text-decoration: none;
-    font-family: Manrope, 'Segoe UI', sans-serif;
-    font-size: 1.18rem;
-    font-weight: 400;
+    font-size: 16px;
+    font-weight: 300;
+    line-height: 24px;
     transition: color 0.2s ease, transform 0.2s ease;
 }
 
-.sidebar-nav-link:hover {
-    color: #726b45;
-    transform: translateX(2px);
+.sidebar-shell--collapsed .sidebar-nav-link {
+    justify-content: center;
+    gap: 0;
+    padding: 12px;
+    width: 48px;
+    margin: 0 auto;
+}
+
+    .sidebar-nav-link:hover {
+        font-weight: 500;
+        transform: translateX(2px);
+    }
+
+.sidebar-shell--collapsed .sidebar-nav-link:hover {
+    transform: translateY(-1px);
 }
 
 .sidebar-nav-link.active {
-    color: #726b45;
-    font-weight: 700;
+    font-weight: 500;
 }
 
-.sidebar-nav-icon {
-    width: 42px;
-    height: 42px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 42px;
-}
-
-.sidebar-nav-icon svg {
-    width: 31px;
-    height: 31px;
-}
-
-.sidebar-footer {
-    margin-top: auto;
-    padding-top: 38px;
-    display: grid;
-    gap: 22px;
-}
-
-.sidebar-footer::before {
-    content: "";
-    display: block;
-    height: 14px;
-    margin-right: 10px;
-    border-radius: 999px;
-    background: linear-gradient(180deg, rgba(254, 252, 241, 0.55), rgba(251, 250, 236, 0.22));
-}
 
 .sidebar-session-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 18px;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: #837d70;
-    font-family: Manrope, 'Segoe UI', sans-serif;
-    font-size: 1.18rem;
-    font-weight: 400;
-    justify-content: flex-start;
+    width: 100%;
 }
 
-.sidebar-session-btn:hover {
-    color: #726b45;
-}
-
-.sidebar-session-icon {
-    width: 42px;
-    height: 42px;
-    display: inline-flex;
-    align-items: center;
+.sidebar-shell--collapsed .sidebar-session-btn {
+    width: 48px;
+    height: 48px;
+    padding: 12px;
     justify-content: center;
-}
-
-.sidebar-session-icon svg {
-    width: 30px;
-    height: 30px;
+    margin: 0 auto;
 }
 
 .sidebar-account-card {
@@ -273,8 +212,30 @@
     .brand-name {
         font-size: 2.7rem;
     }
+}
 
-    .sidebar-cta-btn {
-        min-height: 82px;
+@media (max-width: 768px) {
+    .sidebar-shell,
+    .sidebar-shell--collapsed {
+        width: 100%;
+        max-width: none;
+        padding: 24px 18px;
+        align-items: stretch;
+    }
+
+    .sidebar-shell--collapsed .sidebar-header,
+    .sidebar-shell--collapsed .sidebar-quick-create,
+    .sidebar-shell--collapsed .sidebar-nav,
+    .sidebar-shell--collapsed .sidebar-footer {
+        align-items: stretch;
+    }
+
+    .sidebar-shell--collapsed .sidebar-nav-link,
+    .sidebar-shell--collapsed .sidebar-create-btn,
+    .sidebar-shell--collapsed .sidebar-create-note-btn,
+    .sidebar-shell--collapsed .sidebar-session-btn {
+        width: 100%;
+        margin: 0;
     }
 }
+

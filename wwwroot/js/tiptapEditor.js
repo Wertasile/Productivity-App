@@ -1,5 +1,10 @@
+// Editor registry to keep track of all editor instances
+// In react, when editor is invoked, via useEditor it manages the instance and its lifecycle, but in this vanilla JS implementation we need to handle it ourselves.
+// editorId → {editor, dotNetRef, rootElement}
 const editorRegistry = new Map();
 
+// TipTap modules are imported via ESM.sh CDN. 
+// We use a single promise to load all required modules in parallel and cache the results for subsequent editor instances.
 const tiptapModulesPromise = Promise.all([
     import("https://esm.sh/@tiptap/core@2.11.5"),
     import("https://esm.sh/@tiptap/starter-kit@2.11.5"),
@@ -18,6 +23,10 @@ const tiptapModulesPromise = Promise.all([
     Image: imageModule.default
 }));
 
+// Function to build content-payload (editor content) that will be sent to Blazor when editor content changes.
+// It includes HTML, JSON, and plain text representations of the content.
+// const json = editor.getJSON();
+// handleChange(json);
 function buildContentPayload(editor) {
     return {
         html: editor.getHTML(),
@@ -26,6 +35,8 @@ function buildContentPayload(editor) {
     };
 }
 
+// editor.isActive is used to set state of block type
+// when we want to get editor state, it is returned as a single state object
 function buildStatePayload(editor) {
     return {
         isBold: editor.isActive("bold"),
@@ -50,6 +61,10 @@ function buildStatePayload(editor) {
     };
 }
 
+// ---------------------- EDITOR STATE CONBTENT AND STATE CHANGE i.e. handleChange --------------------- //
+
+// emulates the behavior of onChange callback in React implementation, 
+// by invoking corresponding methods in Blazor via DotNetRef when editor content or state changes.
 async function notifyContentChanged(entry) {
     if (!entry?.dotNetRef) {
         return;
@@ -60,6 +75,8 @@ async function notifyContentChanged(entry) {
         .catch(error => console.error("Failed to notify Blazor about editor content changes.", error));
 }
 
+// emulates the behavior of StateChange callback in React implementation,
+// by invoking corresponding methods in Blazor via DotNetRef when editor content or state changes.
 async function notifyStateChanged(entry) {
     if (!entry?.dotNetRef) {
         return;
@@ -70,16 +87,9 @@ async function notifyStateChanged(entry) {
         .catch(error => console.error("Failed to notify Blazor about editor state changes.", error));
 }
 
-function createEditorHost(element) {
-    element.innerHTML = "";
 
-    const host = document.createElement("div");
-    host.className = "editor-surface";
-    element.appendChild(host);
-
-    return host;
-}
-
+// executes the actual command which we click on toolbar, 
+// by invoking corresponding chainable commands in TipTap editor instance.
 function executeCommand(editor, commandName) {
     switch (commandName) {
         case "undo":
@@ -148,12 +158,17 @@ function executeCommand(editor, commandName) {
     }
 }
 
+// emulates creation of the editor instance / variable via useEditor in REACT
+// it is called from Blazor when editor component is initialized, and it creates the editor instance and sets up all necessary event handlers for content and state changes.
 async function createEditor(editorId, element, dotNetRef, options) {
+
+    // we need to wait for the TipTap modules to be loaded before we can create the editor instance, which is handled by the tiptapModulesPromise.
     const { Editor, StarterKit, Underline, Highlight, TextAlign, Link, Image } = await tiptapModulesPromise;
 
     destroyEditor(editorId);
 
-    const host = createEditorHost(element);
+    // Mount directly onto the element — no extra wrapper div needed
+    element.innerHTML = "";
 
     const entry = {
         dotNetRef,
@@ -162,7 +177,7 @@ async function createEditor(editorId, element, dotNetRef, options) {
     };
 
     const editor = new Editor({
-        element: host,
+        element: element,   // ← was: host (the injected editor-surface div)
         extensions: [
             StarterKit,
             Underline,
@@ -182,17 +197,23 @@ async function createEditor(editorId, element, dotNetRef, options) {
         ],
         content: options?.content ?? "",
         autofocus: options?.autofocus ?? false,
+        // when editor is created, we need to notify Blazor about content and state changes, so that it can initialize the toolbar button states accordingly.
         onCreate: async () => {
             await notifyContentChanged(entry);
             await notifyStateChanged(entry);
         },
+        // when keystroke / input happens, we need to notify Blazor about content and state changes, so that it can update the toolbar button states accordingly.
         onUpdate: async () => {
             await notifyContentChanged(entry);
             await notifyStateChanged(entry);
+            // Scroll the cursor into view whenever content changes
+            entry.editor.commands.scrollIntoView();
         },
+        // when selection changes, we need to notify Blazor about state changes, so that it can update the toolbar button states accordingly.
         onSelectionUpdate: async () => {
             await notifyStateChanged(entry);
         },
+        // when editor is focused, we need to notify Blazor about state changes, so that it can update the toolbar button states accordingly.
         onTransaction: async () => {
             await notifyStateChanged(entry);
         }
@@ -202,6 +223,8 @@ async function createEditor(editorId, element, dotNetRef, options) {
     editorRegistry.set(editorId, entry);
 }
 
+// this function is called from Blazor to register the DotNetRef for the editor instance
+// which will be used to invoke callbacks to Blazor when editor content or state changes.
 function registerStateListener(editorId, dotNetRef) {
     const entry = editorRegistry.get(editorId);
 
@@ -213,6 +236,7 @@ function registerStateListener(editorId, dotNetRef) {
     void notifyStateChanged(entry);
 }
 
+// execiutes the command which is triggered by toolbar button click in Blazor, by invoking corresponding chainable commands in TipTap editor instance.
 function execCommand(editorId, commandName) {
     const entry = editorRegistry.get(editorId);
 
@@ -231,6 +255,8 @@ function execCommand(editorId, commandName) {
     return wasHandled;
 }
 
+// to destroy the editor instance and clean up resources when the editor component is unmounted in Blazor
+// we need to manually destroy the editor instance and clear the registry entry, which is automatically handled by React when component unmounts.
 function destroyEditor(editorId) {
     const entry = editorRegistry.get(editorId);
 
@@ -249,7 +275,32 @@ function destroyEditor(editorId) {
     editorRegistry.delete(editorId);
 }
 
+// added after with copilot
+function setEditorContent(editorId, html) {
+    const entry = editorRegistry.get(editorId);
+
+    if (!entry?.editor) {
+        console.warn(`Editor '${editorId}' is not ready yet.`);
+        return;
+    }
+
+    entry.editor.commands.setContent(html, false);
+}
+
+function getEditorHtml(editorId) {
+    const entry = editorRegistry.get(editorId);
+
+    if (!entry?.editor) {
+        console.warn(`Editor '${editorId}' is not ready yet.`);
+        return "";
+    }
+
+    return entry.editor.getHTML();
+}
+
 window.createEditor = createEditor;
 window.registerStateListener = registerStateListener;
 window.execCommand = execCommand;
 window.destroyEditor = destroyEditor;
+window.setEditorContent = setEditorContent;
+window.getEditorHtml = getEditorHtml;

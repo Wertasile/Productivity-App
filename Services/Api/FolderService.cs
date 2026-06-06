@@ -1,5 +1,7 @@
+
 using System.Net.Http.Json;
 using Blazored.LocalStorage;
+using System.Text.Json;
 
 public class FolderService
 {
@@ -7,19 +9,30 @@ public class FolderService
     private readonly ILocalStorageService _localStorage;
     private readonly SessionStore _sessionStore;
     private readonly LocalAppStateStore _localAppStateStore;
-    private readonly string api = "folders";
 
-    public FolderService(
-        IHttpClientFactory factory,
-        ILocalStorageService localStorage,
-        SessionStore sessionStore,
-        LocalAppStateStore localAppStateStore)
+    private string api = "folders";
+
+    public FolderService(IHttpClientFactory factory, ILocalStorageService localStorage, SessionStore sessionStore, LocalAppStateStore localAppStateStore)
     {
         _httpClient = factory.CreateClient("AppApi");
         _localStorage = localStorage;
         _sessionStore = sessionStore;
         _localAppStateStore = localAppStateStore;
     }
+
+    // -------------------------------------------- GET FOLDER TREE --------------------------------------------
+
+    public async Task<TreeView> GetFolderTree()
+    {
+        if (await IsGuestModeAsync())
+        {
+            var state = await _localAppStateStore.GetStateAsync();
+            return BuildTreeFolders(null, state.Folders, state.Notes);
+        }
+        return await _httpClient.GetFromJsonAsync<TreeView>($"Prod/folders/tree") ?? new TreeView();
+    }
+
+    // -------------------------------------------- GET ALL FOLDERS --------------------------------------------
 
     public async Task<List<Folder>> GetFolders()
     {
@@ -29,8 +42,10 @@ public class FolderService
             return state.Folders.OrderBy(folder => folder.Name).ToList();
         }
 
-        return await _httpClient.GetFromJsonAsync<List<Folder>>($"Prod/folders/") ?? new List<Folder>();
+        return await _httpClient.GetFromJsonAsync<List<Folder>>($"Prod/{api}/") ?? new List<Folder>();
     }
+
+    // -------------------------------------------- GET FOLDER CONTENT BY ID --------------------------------------------
 
     public async Task<FolderContent> GetFolder(string id)
     {
@@ -40,8 +55,10 @@ public class FolderService
             return BuildFolderContent(state, id);
         }
 
-        return await _httpClient.GetFromJsonAsync<FolderContent>($"Prod/folders/{id}") ?? new FolderContent();
+        return await _httpClient.GetFromJsonAsync<FolderContent>($"Prod/{api}/{id}") ?? new FolderContent();
     }
+
+    // -------------------------------------------- CREATE FOLDER --------------------------------------------
 
     public async Task<Folder> CreateFolder(Folder folder)
     {
@@ -74,10 +91,12 @@ public class FolderService
             });
         }
 
-        var response = await _httpClient.PostAsJsonAsync($"Prod/folders", folder);
+        var options = new JsonSerializerOptions { PropertyNamingPolicy = null };
+        var response = await _httpClient.PostAsJsonAsync($"Prod/folders", folder, options);
         return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<Folder>() ?? new Folder() : new Folder();
     }
 
+    // -------------------------------------------- UPDATE FOLDER --------------------------------------------
     public async Task<string> DeleteFolder(Folder folder)
     {
         if (await IsGuestModeAsync())
@@ -94,10 +113,12 @@ public class FolderService
             return "Folder deleted";
         }
 
-        var response = await _httpClient.DeleteFromJsonAsync<MessageResponse>($"{api}/{folder.Id}");
+        var response = await _httpClient.DeleteFromJsonAsync<MessageResponse>($"Prod/folders/{folder.Id}");
         return response != null ? response.message : "Error deleting folder";
+
     }
 
+    // -------------------------------------------- UPDATE FOLDER --------------------------------------------
     public async Task<Folder> UpdateFolder(Folder folder)
     {
         if (await IsGuestModeAsync())
@@ -131,7 +152,8 @@ public class FolderService
             });
         }
 
-        var response = await _httpClient.PutAsJsonAsync($"Prod/folders/{folder.Id}", folder);
+        var options = new JsonSerializerOptions { PropertyNamingPolicy = null };
+        var response = await _httpClient.PutAsJsonAsync($"Prod/folders/{folder.Id}", folder, options);
         return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<Folder>() ?? new Folder() : new Folder();
     }
 
@@ -139,6 +161,8 @@ public class FolderService
     {
         return await _sessionStore.GetGuestSessionAsync() is not null;
     }
+
+    // -------------------------------------------- HELPER METHODS --------------------------------------------
 
     private static FolderContent BuildFolderContent(LocalAppState state, string folderId)
     {
@@ -237,4 +261,40 @@ public class FolderService
 
         return result;
     }
+
+    private static TreeView BuildTreeFolders(string? parentFolderId, List<Folder> allFolders, List<Note> allNotes)
+    {
+        return new TreeView
+        {
+            Id = parentFolderId ?? "ROOT",
+            Name = "ROOT",
+            Folders = BuildMinFolders(parentFolderId, allFolders, allNotes),
+            Notes = allNotes
+                .Where(n => string.IsNullOrWhiteSpace(n.FolderId))
+                .OrderByDescending(n => n.UpdatedAt)
+                .Select(n => new minNote { Id = n.Id, Title = n.Title, FolderId = n.FolderId ?? string.Empty })
+                .ToList()
+        };
+    }
+
+    private static List<minFolder> BuildMinFolders(string? parentFolderId, List<Folder> allFolders, List<Note> allNotes)
+    {
+        return allFolders
+            .Where(f => NormalizeParentFolderId(f.ParentFolderId) == parentFolderId)
+            .OrderBy(f => f.Name)
+            .Select(f => new minFolder
+            {
+                Id = f.Id,
+                Name = f.Name,
+                ParentFolderId = f.ParentFolderId ?? string.Empty,
+                Folders = BuildMinFolders(f.Id, allFolders, allNotes),
+                Notes = allNotes
+                    .Where(n => n.FolderId == f.Id)
+                    .OrderByDescending(n => n.UpdatedAt)
+                    .Select(n => new minNote { Id = n.Id, Title = n.Title, FolderId = n.FolderId ?? string.Empty })
+                    .ToList()
+            })
+            .ToList();
+    }
+
 }

@@ -1,0 +1,44 @@
+.library-page{
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+}
+
+.tree-view{
+    max-width: 300px;
+    min-width: 200px;
+    border: 1px solid #ccc;
+    background-color: #FBFAEC;
+    padding: 10px;
+    height: 100vh;
+}
+
+.content-area{
+    flex: 1;
+}
+
+.selected{
+    background-color: #E9E9D7;
+    border-radius: 8px;
+    font-weight: 800;
+}
+
+.tree-folder-item, .tree-note-item{
+    padding: 5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.tree-folder-item:hover, .tree-note-item:hover{
+    background-color: #e0e0e0;
+}
+
+.tree-subfolder {
+    margin-left: 20px;
+}
+
+.tree-subfolder-folder{
+    margin-left: 30px;
+}
